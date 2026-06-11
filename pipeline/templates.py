@@ -4,8 +4,10 @@
 模板决定底层布局与固定节目效果;内容(公式、台词、表情节拍)全部来自 storyboard。
 每个模板:  fn(ctx, fig, ax)
 """
+import math
+
 from . import fx
-from .core import C, T, appear, chip, rgba
+from .core import C, T, appear, chip, clamp, ease, rgba
 from .items import draw_items
 from .mascot import draw_mascot
 
@@ -25,8 +27,16 @@ def mascot_block(ctx, ax, spec, default_pos, default_s):
     """
     if spec is None:
         return
-    pos = spec.get("pos", default_pos)
+    pos = list(spec.get("pos", default_pos))
     s = spec.get("s", default_s)
+    enter = spec.get("enter")
+    if enter and enter.get("action") == "roll_in":      # 滚入场:左侧滑入 + 渐止小跳
+        edur = float(enter.get("dur", 1.0))
+        p = clamp(ctx.lt / max(edur, 1e-3))
+        e = ease(p)
+        x0 = enter.get("from_x", -1.5)
+        pos[0] = x0 + (pos[0] - x0) * e
+        pos[1] = pos[1] + 0.5 * s * abs(math.sin(2.6 * math.pi * e)) * (1 - e)
     expr = "happy"
     for m in spec.get("moods", []):
         if ctx.lt >= ctx.resolve(m.get("t", 0)):
@@ -53,6 +63,20 @@ def hook(ctx, fig, ax):
         T(ax, 4.5, 9.9, sc["formula"], lt, 1.1, 29, accent, dur=0.4)
     if sc.get("subtitle"):
         T(ax, 4.5, 8.5, sc["subtitle"], lt, 1.9, 26, C.MUTED, dur=0.4)
+    if sc.get("boss_intro"):
+        bi = sc["boss_intro"]
+        bt = ctx.resolve(bi.get("t", 0.18))
+        if lt >= bt:
+            bx, by = bi.get("pos", [4.5, 8.7])
+            bs = bi.get("s", 0.85) * (0.6 + 0.4 * ease(clamp((lt - bt) / 0.4)))
+            fx.draw_boss(ax, bx, by, bs, lt)
+            if bi.get("name"):
+                fx.tag(ax, bx, by - 1.9 * bi.get("s", 0.85), bi["name"], C.RED,
+                       lt, bt + 0.3, 22)
+            for i, sk in enumerate(bi.get("skills", [])):
+                fx.pop(ax, bx - 2.6 + 2.6 * i, by + 1.75 * bi.get("s", 0.85),
+                       sk, lt, bt + 0.6 + 0.35 * i, C.PINK, size=20, rise=0.5,
+                       hold=2.2, bg=True)
     mascot_block(ctx, ax, sc.get("mascot", {
         "pos": [4.5, 4.6], "s": 1.1,
         "moods": [{"t": 0, "expr": "happy"}, {"t": 0.4, "expr": "cheer"}],

@@ -17,7 +17,10 @@ from .core import THEMES, Theme
 from .dub import LEAD, MOCK_CPS, TAIL, split_sentences
 from .items import ITEM_TYPES
 from .mascot import EXPRESSIONS
+from .sfx import SFX
 from .templates import TEMPLATES
+
+MASCOT_ACTIONS = {"roll_in"}
 
 # ----------------------------------------------------------------------------- mathtext 规则表
 # (README「改动须知」+ 实际踩坑的机器可查版;LLM 起草分镜直接复用)
@@ -169,9 +172,21 @@ def lint(storyboard):
             if not isinstance(g.get("params", {}), dict):
                 rep.err(f"{where}.graph", "params 应为对象")
 
+        # BOSS 登场
+        bi = sc.get("boss_intro")
+        if bi:
+            _check_anchor(rep, f"{where}.boss_intro", bi.get("t"), len(sents))
+            for txt in [bi.get("name")] + list(bi.get("skills", [])):
+                if txt:
+                    texts.append((f"{where}.boss_intro", txt))
+
         # mascot 块
         msc = sc.get("mascot")
         if msc:
+            enter = msc.get("enter")
+            if enter and enter.get("action") not in MASCOT_ACTIONS:
+                rep.err(f"{where}.mascot.enter",
+                        f"未知动作 {enter.get('action')!r}(可用 {sorted(MASCOT_ACTIONS)})")
             for mi, m in enumerate(msc.get("moods", [])):
                 if m.get("expr") not in EXPRESSIONS:
                     rep.err(f"{where}.moods[{mi}]",
@@ -209,9 +224,29 @@ def lint(storyboard):
                     graphs.resolve(it.get("plugin", ""))
                 except KeyError as e:
                     rep.err(iw, str(e))
+            if ity == "quiz":
+                opts = it.get("options")
+                if not it.get("question"):
+                    rep.err(iw, "quiz 缺 question")
+                if not isinstance(opts, list) or not (2 <= len(opts) <= 3):
+                    rep.err(iw, "quiz options 应为 2~3 个选项")
+                else:
+                    ans = it.get("answer")
+                    if not isinstance(ans, int) or not (0 <= ans < len(opts)):
+                        rep.err(iw, f"quiz answer={ans!r} 越界")
+                    for o in opts:
+                        _check_mathtext(rep, iw, str(o))
+                        texts.append((iw, str(o)))
+                _check_anchor(rep, f"{iw}.reveal", it.get("reveal"), len(sents))
+                if it.get("question"):
+                    _check_mathtext(rep, iw, it["question"])
+                    texts.append((iw, it["question"]))
+            sfx_name = it.get("sfx", "auto")
+            if sfx_name not in (None, "auto") and sfx_name not in SFX:
+                rep.err(iw, f"未知音效 {sfx_name!r}(可用 {sorted(SFX)})")
             s = it.get("tex") or it.get("text")
             if ity in ("text", "formula", "boxed", "answer", "bigtext", "tag",
-                       "pop", "bubble") and not s:
+                       "pop", "bubble", "danmaku") and not s:
                 rep.err(iw, f"{ity} 缺 tex/text")
             if s:
                 _check_mathtext(rep, iw, s)

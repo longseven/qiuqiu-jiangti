@@ -55,6 +55,15 @@ def mix_segments(segs, total, out_path, bitrate="160k"):
     return out_path
 
 
+def mix_audio(a_path, b_path, out_path, total, bitrate="160k"):
+    """两条音轨混合(配音 + 音效)-> m4a。"""
+    cmd = [ffmpeg_exe(), "-y", "-loglevel", "error", "-i", a_path, "-i", b_path,
+           "-filter_complex", "[0:a][1:a]amix=inputs=2:normalize=0:dropout_transition=0[mix]",
+           "-map", "[mix]", "-t", f"{total:.3f}", "-c:a", "aac", "-b:a", bitrate, out_path]
+    subprocess.run(cmd, check=True)
+    return out_path
+
+
 def encode_video(frames_pattern, fps, out_path, audio=None, crf=18, preset="medium"):
     """帧序列(+可选配音)-> mp4。不加 -shortest:配音略短于画面属正常。"""
     cmd = [ffmpeg_exe(), "-y", "-loglevel", "error",

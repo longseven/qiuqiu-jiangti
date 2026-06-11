@@ -104,6 +104,20 @@ def main():
     if not os.path.exists(narration or ""):
         narration = None
 
+    # ---- 2.5) SFX 音效轨(numpy 合成,与配音混合)----
+    from . import sfx as sfx_mod
+    events = sfx_mod.collect_events(sb, timeline)
+    if events:
+        sfx_wav = os.path.join(outdir, "sfx.wav")
+        sfx_mod.render_track(events, timeline["total"], sfx_wav)
+        print(f"SFX: {len(events)} 个音效事件")
+        if narration:
+            from .media import mix_audio
+            narration = mix_audio(narration, sfx_wav, os.path.join(outdir, "narration_sfx.m4a"),
+                                  timeline["total"])
+        else:
+            narration = sfx_wav
+
     # ---- 3) 并行渲染 ----
     fps = args.fps or (6 if args.proof else timeline.get("fps", 24))
     dpi = args.dpi or (100 if args.proof else 200)

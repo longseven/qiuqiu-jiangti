@@ -184,6 +184,45 @@ def confetti(ax, lt, t0):
         ax.scatter(xs, ys, s=ss, c=cs, marker="s", alpha=a, zorder=9, linewidths=0)
 
 
+# ----------------------------------------------------------------------------- BOSS 形象
+BOSS_BODY = "#8b1e3f"
+BOSS_SPIKE = "#5b1027"
+BOSS_EYE = "#ffe9a8"
+
+
+def draw_boss(ax, cx, cy, s, t=0.0, z=7):
+    """压轴 BOSS:带刺的暗红怪球(与球球同为手绘风,登场用)。"""
+    cy = cy + 0.06 * s * math.sin(2 * math.pi * t / 2.1)
+    # 尖刺
+    n = 11
+    for k in range(n):
+        ang = k / n * 2 * math.pi + 0.28 + 0.04 * math.sin(t * 2 + k)
+        r0, r1 = 0.92 * s, 1.32 * s
+        half = 0.16
+        pts = [(cx + r0 * math.cos(ang - half), cy + r0 * math.sin(ang - half)),
+               (cx + r0 * math.cos(ang + half), cy + r0 * math.sin(ang + half)),
+               (cx + r1 * math.cos(ang), cy + r1 * math.sin(ang))]
+        ax.add_patch(mp.Polygon(pts, closed=True, fc=BOSS_SPIKE, ec="none", zorder=z))
+    # 身体
+    ax.add_patch(mp.Circle((cx, cy), s, fc=BOSS_BODY, ec=BOSS_SPIKE, lw=3, zorder=z + 1))
+    # 怒眼(斜切白眼 + 竖瞳)
+    for sgn in (-1, 1):
+        ex, ey = cx + sgn * 0.36 * s, cy + 0.18 * s
+        ax.add_patch(mp.Ellipse((ex, ey), 0.42 * s, 0.30 * s, angle=-18 * sgn,
+                     fc=BOSS_EYE, ec="none", zorder=z + 2))
+        ax.add_patch(mp.Ellipse((ex, ey - 0.02 * s), 0.10 * s, 0.22 * s,
+                     fc="#23030c", ec="none", zorder=z + 3))
+        ax.plot([ex + sgn * 0.30 * s, ex - sgn * 0.26 * s],
+                [ey + 0.34 * s, ey + 0.12 * s],
+                color=BOSS_SPIKE, lw=4, solid_capstyle="round", zorder=z + 4)
+    # 锯齿嘴
+    mx, my, w = cx, cy - 0.42 * s, 0.62 * s
+    xs = [mx - w / 2 + w * i / 6 for i in range(7)]
+    ys = [my + (0.10 * s if i % 2 else -0.04 * s) for i in range(7)]
+    ax.plot(xs, ys, color="#23030c", lw=3.5, solid_capstyle="round",
+            solid_joinstyle="round", zorder=z + 3)
+
+
 # ----------------------------------------------------------------------------- BOSS 血条
 def boss_hp(gt, crits):
     """HP ∈ [0,1]:在每个 crit 时刻(全局秒)掉一格,等分,最后一格归零。"""
