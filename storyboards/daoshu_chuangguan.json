@@ -22,7 +22,15 @@
       "title": "三连闯关!",
       "formula": "$f(x)=\\mathrm{e}^{x}\\cos 3x-a\\,\\mathrm{e}^{3x}\\cos x$",
       "subtitle": "① 切线   ② 取值范围   ③ 不等式",
-      "bubble": { "t": 0.43, "text": "三道压轴,我全包!", "color": "BLUE", "pos": [6.5, 6.1] }
+      "bubble": {
+        "t": 0.43,
+        "text": "三道压轴,我全包!",
+        "color": "BLUE",
+        "pos": [
+          6.5,
+          6.1
+        ]
+      }
     },
     {
       "id": "card1",
@@ -40,30 +48,116 @@
       "accent": "BLUE",
       "idx": "①",
       "title": "切线方程",
-      "narration": "第一关,切线!a 等于 e 的负π,先求导:f 撇 等于 e 的 x 次方 乘 cos3x 减 3sin3x,再减 e 的负π 乘 e 的 3x 次方 乘 3cosx 减 sinx。x 等于 二分之π 一代:f 二分之π 等于零,切点就在 x 轴上;f 撇 二分之π 等于 4 倍 e 的二分之π,就是斜率。点斜式一写,切线就是 y 等于 4 e 的二分之π 乘 括号 x 减二分之π。",
+      "narration": "第一关,切线!a 等于 e 的负π,先求导:f 撇 等于 e 的 x 次方 乘 cos3x 减 3sin3x,再减 e 的负π 乘 e 的 3x 次方 乘 3cosx 减 sinx。x 等于 二分之π 一代:f 二分之π 等于零,切点就在 x 轴上;f 撇 二分之π 等于 4 倍 e 的二分之π,就是斜率。点斜式一写,切线方程就是 y 等于 4 倍 e 的二分之π,乘以括号 x 减去二分之π,第一关轻松拿下!",
       "min_dur": 24.0,
       "max_dur": 60.0,
-      "graph": { "plugin": "derivative.tangent", "params": {} },
+      "graph": {
+        "plugin": "derivative.tangent",
+        "params": {}
+      },
       "items": [
-        { "t": 0.031, "type": "formula", "tex": "$a=\\mathrm{e}^{-\\pi}:\\ f(x)=\\mathrm{e}^{x}\\cos 3x-\\mathrm{e}^{-\\pi}\\mathrm{e}^{3x}\\cos x$", "pos": [4.5, 13.0], "size": 19, "color": "WHITE" },
-        { "t": 0.219, "type": "formula", "tex": "$f'(x)=\\mathrm{e}^{x}(\\cos 3x-3\\sin 3x)$", "pos": [4.5, 11.85], "size": 24, "color": "MUTED" },
-        { "t": 0.259, "type": "formula", "tex": "$\\qquad-\\,\\mathrm{e}^{-\\pi}\\mathrm{e}^{3x}(3\\cos x-\\sin x)$", "pos": [4.5, 10.75], "size": 24, "color": "MUTED" },
-        { "t": 0.4375, "type": "formula", "tex": "$f\\!\\left(\\frac{\\pi}{2}\\right)=0,\\quad f'\\!\\left(\\frac{\\pi}{2}\\right)=4\\,\\mathrm{e}^{\\frac{\\pi}{2}}$", "pos": [4.5, 9.5], "size": 30, "color": "BLUE" },
-        { "t": "@sent:4", "type": "answer", "tex": "$y=4\\,\\mathrm{e}^{\\frac{\\pi}{2}}\\!\\left(x-\\frac{\\pi}{2}\\right)$", "pos": [4.5, 8.0], "size": 34, "color": "GOLD", "cheer": "漂亮!", "cheer_pos": [7.5, 9.5] }
+        {
+          "t": 0.031,
+          "type": "formula",
+          "tex": "$a=\\mathrm{e}^{-\\pi}:\\ f(x)=\\mathrm{e}^{x}\\cos 3x-\\mathrm{e}^{-\\pi}\\mathrm{e}^{3x}\\cos x$",
+          "pos": [
+            4.5,
+            13.0
+          ],
+          "size": 19,
+          "color": "WHITE"
+        },
+        {
+          "t": 0.219,
+          "type": "formula",
+          "tex": "$f'(x)=\\mathrm{e}^{x}(\\cos 3x-3\\sin 3x)$",
+          "pos": [
+            4.5,
+            11.85
+          ],
+          "size": 24,
+          "color": "MUTED"
+        },
+        {
+          "t": 0.259,
+          "type": "formula",
+          "tex": "$\\qquad-\\,\\mathrm{e}^{-\\pi}\\mathrm{e}^{3x}(3\\cos x-\\sin x)$",
+          "pos": [
+            4.5,
+            10.75
+          ],
+          "size": 24,
+          "color": "MUTED"
+        },
+        {
+          "t": 0.4375,
+          "type": "formula",
+          "tex": "$f\\!\\left(\\frac{\\pi}{2}\\right)=0,\\quad f'\\!\\left(\\frac{\\pi}{2}\\right)=4\\,\\mathrm{e}^{\\frac{\\pi}{2}}$",
+          "pos": [
+            4.5,
+            9.5
+          ],
+          "size": 30,
+          "color": "BLUE"
+        },
+        {
+          "t": "@sent:4",
+          "type": "answer",
+          "tex": "$y=4\\,\\mathrm{e}^{\\frac{\\pi}{2}}\\!\\left(x-\\frac{\\pi}{2}\\right)$",
+          "pos": [
+            4.5,
+            8.0
+          ],
+          "size": 34,
+          "color": "GOLD",
+          "cheer": "漂亮!",
+          "cheer_pos": [
+            7.5,
+            9.5
+          ]
+        }
       ],
       "mascot": {
-        "pos": [1.5, 6.4],
+        "pos": [
+          1.5,
+          6.4
+        ],
         "s": 0.68,
         "moods": [
-          { "t": 0.0, "expr": "think" },
-          { "t": 0.047, "expr": "point" },
-          { "t": 0.672, "expr": "happy" }
+          {
+            "t": 0.0,
+            "expr": "think"
+          },
+          {
+            "t": 0.047,
+            "expr": "point"
+          },
+          {
+            "t": 0.672,
+            "expr": "happy"
+          }
         ],
         "lines": [
-          { "t": 0.072, "text": "求导,上!", "color": "BLUE" },
-          { "t": 0.281, "text": "x=π/2 一代,直接归零!", "color": "GREEN" },
-          { "t": 0.469, "text": "斜率 4e^{π/2},稳~", "color": "BLUE" },
-          { "t": 0.7, "text": "切线拿下!", "color": "GOLD" }
+          {
+            "t": 0.072,
+            "text": "求导,上!",
+            "color": "BLUE"
+          },
+          {
+            "t": 0.281,
+            "text": "x=π/2 一代,直接归零!",
+            "color": "GREEN"
+          },
+          {
+            "t": 0.469,
+            "text": "斜率 4e^{π/2},稳~",
+            "color": "BLUE"
+          },
+          {
+            "t": 0.7,
+            "text": "切线拿下!",
+            "color": "GOLD"
+          }
         ]
       }
     },
@@ -97,28 +191,119 @@
       "narration": "第二关,求 a 的范围!f 等于零,移项得 e 的 x 次方 cos3x 等于 a 乘 e 的 3x 次方 cos x。cos3x 拆成 cos x 乘 二cos2x 减一,约掉 cos x,得 二cos2x 减一 除以 e 的 2x 次方 等于 a。换元 t 等于 2x,h t 等于 二cos t 减一 除以 e 的 t 次方,单调递减,从一 降到 负 e 的负二分之π。要没有零点,a 就躲区间外:小于等于 负 e 的负二分之π,或者 大于等于一。",
       "min_dur": 28.0,
       "max_dur": 60.0,
-      "graph": { "plugin": "derivative.h_mono", "params": {} },
+      "graph": {
+        "plugin": "derivative.h_mono",
+        "params": {}
+      },
       "items": [
-        { "t": 0.026, "type": "formula", "tex": "$f(x)=0\\ \\Rightarrow\\ \\mathrm{e}^{x}\\cos 3x=a\\,\\mathrm{e}^{3x}\\cos x$", "pos": [4.5, 13.0], "size": 20, "color": "WHITE" },
-        { "t": 0.211, "type": "formula", "tex": "$\\cos 3x=\\cos x\\,(2\\cos 2x-1)$", "pos": [4.5, 11.85], "size": 23, "color": "MUTED" },
-        { "t": 0.368, "type": "formula", "tex": "$\\Rightarrow\\ \\dfrac{2\\cos 2x-1}{\\mathrm{e}^{2x}}=a$", "pos": [4.5, 10.7], "size": 23, "color": "MUTED" },
-        { "t": 0.526, "type": "formula", "tex": "$t=2x:\\ h(t)=\\dfrac{2\\cos t-1}{\\mathrm{e}^{t}}\\ \\,$ 递减 (见图)", "pos": [4.5, 9.45], "size": 22, "color": "WHITE" },
-        { "t": "@sent:5", "type": "answer", "tex": "$a\\in\\left(-\\infty,-\\mathrm{e}^{-\\frac{\\pi}{2}}\\right]\\cup\\left[1,+\\infty\\right)$", "pos": [4.5, 8.05], "size": 26, "color": "GOLD", "cheer": "漂亮!", "cheer_pos": [7.5, 8.7] }
+        {
+          "t": 0.026,
+          "type": "formula",
+          "tex": "$f(x)=0\\ \\Rightarrow\\ \\mathrm{e}^{x}\\cos 3x=a\\,\\mathrm{e}^{3x}\\cos x$",
+          "pos": [
+            4.5,
+            13.0
+          ],
+          "size": 20,
+          "color": "WHITE"
+        },
+        {
+          "t": 0.211,
+          "type": "formula",
+          "tex": "$\\cos 3x=\\cos x\\,(2\\cos 2x-1)$",
+          "pos": [
+            4.5,
+            11.85
+          ],
+          "size": 23,
+          "color": "MUTED"
+        },
+        {
+          "t": 0.368,
+          "type": "formula",
+          "tex": "$\\Rightarrow\\ \\dfrac{2\\cos 2x-1}{\\mathrm{e}^{2x}}=a$",
+          "pos": [
+            4.5,
+            10.7
+          ],
+          "size": 23,
+          "color": "MUTED"
+        },
+        {
+          "t": 0.526,
+          "type": "formula",
+          "tex": "$t=2x:\\ h(t)=\\dfrac{2\\cos t-1}{\\mathrm{e}^{t}}\\ \\,$ 递减 (见图)",
+          "pos": [
+            4.5,
+            9.45
+          ],
+          "size": 22,
+          "color": "WHITE"
+        },
+        {
+          "t": "@sent:5",
+          "type": "answer",
+          "tex": "$a\\in\\left(-\\infty,-\\mathrm{e}^{-\\frac{\\pi}{2}}\\right]\\cup\\left[1,+\\infty\\right)$",
+          "pos": [
+            4.5,
+            8.05
+          ],
+          "size": 26,
+          "color": "GOLD",
+          "cheer": "漂亮!",
+          "cheer_pos": [
+            7.5,
+            8.7
+          ]
+        }
       ],
       "mascot": {
-        "pos": [1.5, 6.4],
+        "pos": [
+          1.5,
+          6.4
+        ],
         "s": 0.68,
         "moods": [
-          { "t": 0.0, "expr": "think" },
-          { "t": 0.526, "expr": "cool" }
+          {
+            "t": 0.0,
+            "expr": "think"
+          },
+          {
+            "t": 0.526,
+            "expr": "cool"
+          }
         ],
         "lines": [
-          { "t": 0.066, "text": "f=0,移项!", "color": "GOLD" },
-          { "t": 0.224, "text": "cos3x 拆开~", "color": "BLUE" },
-          { "t": 0.382, "text": "cosx 约掉,清爽!", "color": "GREEN" },
-          { "t": 0.539, "text": "换元 t=2x", "color": "GOLD" },
-          { "t": 0.724, "text": "一路向下,递减!", "color": "BLUE" },
-          { "t": 0.879, "text": "a 躲区间外去!", "color": "GOLD" }
+          {
+            "t": 0.066,
+            "text": "f=0,移项!",
+            "color": "GOLD"
+          },
+          {
+            "t": 0.224,
+            "text": "cos3x 拆开~",
+            "color": "BLUE"
+          },
+          {
+            "t": 0.382,
+            "text": "cosx 约掉,清爽!",
+            "color": "GREEN"
+          },
+          {
+            "t": 0.539,
+            "text": "换元 t=2x",
+            "color": "GOLD"
+          },
+          {
+            "t": 0.724,
+            "text": "一路向下,递减!",
+            "color": "BLUE"
+          },
+          {
+            "t": 0.879,
+            "text": "a 躲区间外去!",
+            "color": "GOLD"
+          }
         ]
       }
     },
@@ -153,29 +338,123 @@
       "narration": "第三关,最难的不等式!a 等于零,f 等于 e 的 x 次方 cos3x。g 等于 2f 加 f 撇,一步合并成 3 根号2 乘 e 的 x 次方 乘 cos 括号 3x 加四分之π。先看符号:g 小于零,当且仅当 x 在 十二分之π 到 十二分之五π 之间,小球滚进山谷。关键两步:第一,e 的 x 次方 把右边放大、图象右偏,等高的 x1 加 x3 大于 二分之π;第二,x2 满足 g 撇 x2 等于 g x1 小于零,推出 x2 大于 四分之π。两个一加,正好大于 四分之三π,得证!",
       "min_dur": 32.0,
       "max_dur": 60.0,
-      "graph": { "plugin": "derivative.valley", "params": {} },
+      "graph": {
+        "plugin": "derivative.valley",
+        "params": {}
+      },
       "items": [
-        { "t": 0.023, "type": "formula", "tex": "$a=0:\\ g(x)=2f(x)+f'(x)$", "pos": [4.5, 13.0], "size": 23, "color": "GREEN" },
-        { "t": 0.05, "type": "formula", "tex": "$\\qquad=3\\sqrt{2}\\,\\mathrm{e}^{x}\\cos\\!\\left(3x+\\frac{\\pi}{4}\\right)$", "pos": [4.5, 11.85], "size": 23, "color": "GREEN" },
-        { "t": 0.182, "type": "formula", "tex": "$g(x)<0\\ \\Leftrightarrow\\ x\\in\\!\\left(\\frac{\\pi}{12},\\frac{5\\pi}{12}\\right)$", "pos": [4.5, 10.55], "size": 24, "color": "WHITE" },
-        { "t": 0.409, "type": "formula", "tex": "$x_1+x_3>\\frac{\\pi}{2}$,$\\quad$ $x_2>\\frac{\\pi}{4}$", "pos": [4.5, 9.3], "size": 23, "color": "MUTED" },
-        { "t": "@sent:6", "type": "answer", "tex": "$x_1+x_2+x_3>\\frac{\\pi}{2}+\\frac{\\pi}{4}=\\frac{3\\pi}{4}$", "pos": [4.5, 7.95], "size": 27, "color": "GREEN", "cheer": "得证!", "cheer_pos": [7.5, 8.7] }
+        {
+          "t": 0.023,
+          "type": "formula",
+          "tex": "$a=0:\\ g(x)=2f(x)+f'(x)$",
+          "pos": [
+            4.5,
+            13.0
+          ],
+          "size": 23,
+          "color": "GREEN"
+        },
+        {
+          "t": 0.05,
+          "type": "formula",
+          "tex": "$\\qquad=3\\sqrt{2}\\,\\mathrm{e}^{x}\\cos\\!\\left(3x+\\frac{\\pi}{4}\\right)$",
+          "pos": [
+            4.5,
+            11.85
+          ],
+          "size": 23,
+          "color": "GREEN"
+        },
+        {
+          "t": 0.182,
+          "type": "formula",
+          "tex": "$g(x)<0\\ \\Leftrightarrow\\ x\\in\\!\\left(\\frac{\\pi}{12},\\frac{5\\pi}{12}\\right)$",
+          "pos": [
+            4.5,
+            10.55
+          ],
+          "size": 24,
+          "color": "WHITE"
+        },
+        {
+          "t": 0.409,
+          "type": "formula",
+          "tex": "$x_1+x_3>\\frac{\\pi}{2}$,$\\quad$ $x_2>\\frac{\\pi}{4}$",
+          "pos": [
+            4.5,
+            9.3
+          ],
+          "size": 23,
+          "color": "MUTED"
+        },
+        {
+          "t": "@sent:6",
+          "type": "answer",
+          "tex": "$x_1+x_2+x_3>\\frac{\\pi}{2}+\\frac{\\pi}{4}=\\frac{3\\pi}{4}$",
+          "pos": [
+            4.5,
+            7.95
+          ],
+          "size": 27,
+          "color": "GREEN",
+          "cheer": "得证!",
+          "cheer_pos": [
+            7.5,
+            8.7
+          ]
+        }
       ],
       "mascot": {
-        "pos": [1.5, 6.4],
+        "pos": [
+          1.5,
+          6.4
+        ],
         "s": 0.68,
         "moods": [
-          { "t": 0.0, "expr": "think" },
-          { "t": 0.205, "expr": "love" },
-          { "t": 0.841, "expr": "cheer" }
+          {
+            "t": 0.0,
+            "expr": "think"
+          },
+          {
+            "t": 0.205,
+            "expr": "love"
+          },
+          {
+            "t": 0.841,
+            "expr": "cheer"
+          }
         ],
         "lines": [
-          { "t": 0.057, "text": "g 登场!", "color": "GREEN" },
-          { "t": 0.095, "text": "合体成 3√2 余弦,帅!", "color": "BLUE" },
-          { "t": 0.205, "text": "小球滚进山谷~", "color": "GREEN" },
-          { "t": 0.432, "text": "e^x 偏心,右边更猛!", "color": "PINK" },
-          { "t": 0.659, "text": "x2 卡谷底,>π/4", "color": "GOLD" },
-          { "t": 0.85, "text": "三个一加,超 3π/4!", "color": "GREEN" }
+          {
+            "t": 0.057,
+            "text": "g 登场!",
+            "color": "GREEN"
+          },
+          {
+            "t": 0.095,
+            "text": "合体成 3√2 余弦,帅!",
+            "color": "BLUE"
+          },
+          {
+            "t": 0.205,
+            "text": "小球滚进山谷~",
+            "color": "GREEN"
+          },
+          {
+            "t": 0.432,
+            "text": "e^x 偏心,右边更猛!",
+            "color": "PINK"
+          },
+          {
+            "t": 0.659,
+            "text": "x2 卡谷底,>π/4",
+            "color": "GOLD"
+          },
+          {
+            "t": 0.85,
+            "text": "三个一加,超 3π/4!",
+            "color": "GREEN"
+          }
         ]
       }
     },
@@ -202,9 +481,21 @@
       "title": "三关 · 全通关!",
       "subtitle_pop": "压轴 BOSS 已击败",
       "rows": [
-        { "idx": "①", "accent": "BLUE", "tex": "$y=4\\,\\mathrm{e}^{\\frac{\\pi}{2}}\\!\\left(x-\\frac{\\pi}{2}\\right)$" },
-        { "idx": "②", "accent": "GOLD", "tex": "$a\\in\\left(-\\infty,-\\mathrm{e}^{-\\frac{\\pi}{2}}\\right]\\cup\\left[1,+\\infty\\right)$" },
-        { "idx": "③", "accent": "GREEN", "tex": "$x_1+x_2+x_3>\\frac{3\\pi}{4}$" }
+        {
+          "idx": "①",
+          "accent": "BLUE",
+          "tex": "$y=4\\,\\mathrm{e}^{\\frac{\\pi}{2}}\\!\\left(x-\\frac{\\pi}{2}\\right)$"
+        },
+        {
+          "idx": "②",
+          "accent": "GOLD",
+          "tex": "$a\\in\\left(-\\infty,-\\mathrm{e}^{-\\frac{\\pi}{2}}\\right]\\cup\\left[1,+\\infty\\right)$"
+        },
+        {
+          "idx": "③",
+          "accent": "GREEN",
+          "tex": "$x_1+x_2+x_3>\\frac{3\\pi}{4}$"
+        }
       ],
       "cta": "完整解析 · 关注主页 · 点赞收藏"
     }
