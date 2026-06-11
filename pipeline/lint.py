@@ -40,6 +40,14 @@ _MATH_SEG = re.compile(r"\$([^$]*)\$")
 
 VALID_COLORS = set(Theme.NAMES)
 FX_NAMES = {"starburst", "confetti", "sparkles", "score_pop", "flash"}
+POS_REQUIRED = {"text", "formula", "bigtext", "boxed", "answer", "tag",
+                "pop", "chip", "bubble"}                  # 这些 item 渲染时直接取 it["pos"]
+# 场景级已知字段(白名单;拼错字段名静默被 .get 吞掉,这里给警告)
+SCENE_KEYS = {"id", "template", "accent", "narration", "min_dur", "max_dur",
+              "items", "mascot", "graph", "title", "idx", "tag", "formula",
+              "subtitle", "bubble", "xp", "combo", "crit", "crit_at", "final",
+              "rows", "cta", "subtitle_pop", "clear_title", "start_text",
+              "shake", "expr", "boss_intro", "game"}
 
 
 class Report:
@@ -139,10 +147,17 @@ def lint(storyboard):
             rep.err(where, f"未知模板 {tpl!r}(可用 {sorted(TEMPLATES)})")
             continue
         _check_color(rep, where, sc.get("accent"))
+        for k in set(sc) - SCENE_KEYS:
+            rep.warn(where, f"未知字段 {k!r}(拼写错误会被静默忽略)")
         mind = float(sc.get("min_dur", 2.5))
         maxd = float(sc.get("max_dur", max(mind, 60.0)))
         if mind > maxd:
             rep.err(where, f"min_dur {mind} > max_dur {maxd}")
+        if sc.get("crit") and float(sc.get("crit_at", 0.5)) >= mind:
+            rep.err(where, f"crit_at {sc.get('crit_at', 0.5)} 超出场景最短时长 {mind}")
+        if sc.get("narration") is not None and not isinstance(sc["narration"], str):
+            rep.err(where, f"narration 应为字符串,得到 {type(sc['narration']).__name__}")
+            continue
         narration = (sc.get("narration") or "").strip()
         sents = split_sentences(narration)
         est = LEAD + (len(re.sub(r"\s", "", narration)) / MOCK_CPS if narration else 0) + TAIL
@@ -207,6 +222,8 @@ def lint(storyboard):
             _check_color(rep, f"{where}.bubble", b.get("color"))
             if b.get("text"):
                 texts.append((f"{where}.bubble", b["text"]))
+            else:
+                rep.err(f"{where}.bubble", "bubble 缺 text")
 
         # items
         for ii, it in enumerate(sc.get("items", [])):
@@ -251,6 +268,8 @@ def lint(storyboard):
             if s:
                 _check_mathtext(rep, iw, s)
                 texts.append((iw, s))
+            if ity in POS_REQUIRED and "pos" not in it:
+                rep.err(iw, f"{ity} 必须给 pos [x, y](渲染时直接取用,缺失会崩)")
             if "pos" in it and (not isinstance(it["pos"], list) or len(it["pos"]) != 2):
                 rep.err(iw, f"pos 应为 [x, y],得到 {it.get('pos')!r}")
 

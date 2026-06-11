@@ -58,6 +58,11 @@ def render_frames(sb_path, tl_path, total, fps, dpi, frames_dir, workers=None):
         for c in pool.imap_unordered(_render_range, ranges):
             done += c
             print(f"  {done}/{n} 帧 ({time.time() - t0:.0f}s)", flush=True)
+    # worker 崩溃时 imap 数目对不上;就算对上也核对落盘文件数,缺帧立刻报而不是留给 ffmpeg
+    missing = [i for i in range(n)
+               if not os.path.exists(os.path.join(frames_dir, f"f{i:05d}.png"))]
+    if missing:
+        raise RuntimeError(f"帧渲染不完整:缺 {len(missing)} 帧(首个 f{missing[0]:05d}.png)")
     print(f"帧渲染完成,用时 {time.time() - t0:.0f}s")
     return n
 

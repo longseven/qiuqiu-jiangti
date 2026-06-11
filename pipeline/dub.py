@@ -44,12 +44,15 @@ def sentence_starts(text, boundaries):
     """把 WordBoundary 流映射为每句的起始秒(相对音频开头)。
 
     boundaries = [(offset_sec, word_text), ...]
-    做法:把 boundary 文本按出现顺序拼接,与去标点的台词做最长前缀匹配,
+    做法:把 boundary 文本按出现顺序拼接,与去标点的台词做字符位置匹配,
     每句的首字符落进哪个 boundary,该 boundary 的 offset 即句起点。
+    返回 (starts, coverage):coverage = boundary 覆盖台词字符的比例,
+    低于 0.9 时调用方应告警(锚点可能错位)。
     """
     sents = split_sentences(text)
     if not sents or not boundaries:
-        return []
+        return [], 0.0
+    total_chars = sum(len(_norm(s)) for s in sents) or 1
     starts_chars = []
     acc = 0
     for s in sents:
@@ -63,13 +66,16 @@ def sentence_starts(text, boundaries):
             continue
         spans.append((pos, pos + n, off))
         pos += n
+    coverage = min(1.0, pos / total_chars)
+    last_t = spans[-1][2] if spans else 0.0
     result = []
     for c0 in starts_chars:
         hit = next((off for lo, hi, off in spans if lo <= c0 < hi), None)
         if hit is None:
-            hit = spans[-1][2] if spans else 0.0
+            # boundary 不完整时按字符比例插值,而非笼统回退到最后时刻
+            hit = last_t * (c0 / total_chars) if pos < total_chars else last_t
         result.append(round(hit, 3))
-    return result
+    return result, round(coverage, 3)
 
 
 def mock_measure(text):
@@ -114,7 +120,8 @@ async def synth(text, voice, rate, pitch, mp3_path, retries=5, attempt_timeout=9
                 _synth_once(text, voice, rate, pitch, mp3_path),
                 timeout=attempt_timeout)
             dur = audio_duration(mp3_path)
-            return dur, sentence_starts(text, boundaries)
+            sents, coverage = sentence_starts(text, boundaries)
+            return dur, sents, coverage
         except Exception as e:                      # 网络抖动/重置/超时
             last_err = e
             await asyncio.sleep(1.5 * (attempt + 1))
@@ -135,8 +142,9 @@ def build_timeline(storyboard, outdir, mock=False, verbose=True):
     os.makedirs(audio_dir, exist_ok=True)
 
     rows = []          # (scene, audio_dur, sents_rel_audio, mp3 | None)
+    warnings = []
     for sc in storyboard["scenes"]:
-        text = (sc.get("narration") or "").strip()
+        text = str(sc.get("narration") or "").strip()   # 容错非字符串(lint 也会拦)
         if not text:
             rows.append((sc, 0.0, [], None))
             continue
@@ -154,15 +162,18 @@ def build_timeline(storyboard, outdir, mock=False, verbose=True):
             if verbose:
                 print(f"  [cache] {sc['id']}: {d['dur']:.2f}s")
             continue
-        dur, sents = asyncio.run(synth(text, voice, rate, pitch, mp3))
+        dur, sents, coverage = asyncio.run(synth(text, voice, rate, pitch, mp3))
+        if coverage < 0.9:
+            warnings.append(f"场景 {sc['id']}: WordBoundary 覆盖率仅 {coverage:.0%},"
+                            f"@sent 锚点可能错位,请人工核对")
         with open(sidecar, "w", encoding="utf-8") as f:
-            json.dump({"dur": dur, "sents": sents}, f)
+            json.dump({"dur": dur, "sents": sents, "coverage": coverage}, f)
         rows.append((sc, dur, sents, mp3))
         if verbose:
-            print(f"  [tts]   {sc['id']}: {dur:.2f}s ({len(text)} 字, {len(sents)} 句)")
+            print(f"  [tts]   {sc['id']}: {dur:.2f}s ({len(text)} 字, {len(sents)} 句, "
+                  f"锚点覆盖 {coverage:.0%})")
 
     scenes_tl, segs, t = [], [], 0.0
-    warnings = []
     for sc, adur, sents, mp3 in rows:
         min_d = float(sc.get("min_dur", 2.5))
         max_d = float(sc.get("max_dur", max(min_d, 60.0)))
@@ -176,11 +187,16 @@ def build_timeline(storyboard, outdir, mock=False, verbose=True):
                 dur = max_d
         else:
             dur = min_d
+        # 截断时丢弃落在场景外的句锚点,避免 @sent 解析出 > dur 的时刻
+        sents_in = [round(LEAD + s, 3) for s in sents if LEAD + s <= dur - 0.2]
+        if len(sents_in) < len(sents):
+            warnings.append(f"场景 {sc['id']}: {len(sents) - len(sents_in)} 个句锚点"
+                            f"超出截断后时长,已移除(引用它们的 @sent 会落到最后一句)")
         scenes_tl.append({
             "id": sc["id"], "start": round(t, 3), "dur": round(dur, 3),
             "audio_start": LEAD if adur > 0 else 0.0,
             "audio_dur": round(adur, 3),
-            "sents": [round(LEAD + s, 3) for s in sents],   # 场景内秒
+            "sents": sents_in,                              # 场景内秒
         })
         if mp3:
             segs.append((t + LEAD, mp3))

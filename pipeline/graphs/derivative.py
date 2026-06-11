@@ -3,6 +3,13 @@
 
 本模块自带本题的数学事实(f/g/h 及标注点),params 可覆盖子动画节拍。
 插件清单见 PLUGINS;接口统一为 fn(gax, lt, dur, params)。
+
+各插件的缺省节拍基线(评审要求显式注明,防止换场景时长时误用):
+  tangent : animate_vertical.graph_part1(原 32s part1 场景)
+  h_mono  : animate_vertical.graph_part2(原 38s part2 场景)
+  valley  : animate_fun.big_graph(原 44s part3 场景;full2 第三关用的就是它,
+            不是 graph_part3——节拍 t_band=5.6/t_pts=6.5/t_x2=9.0 即由此而来)
+场景时长差异大时请通过 params 覆盖节拍。
 """
 import math
 
@@ -153,7 +160,8 @@ def valley(gax, lt, dur, params):
     pc = ease(clamp((lt - t_curve) / 1.4))
     nc = max(2, int(len(xs) * pc))
     gax.plot(xs[:nc], g3(xs[:nc]), color=C.GREEN, lw=3.2)
-    gax.axhline(0, color=C.GSPINE, lw=1.0)
+    # 零线沿用原版 big_graph 的硬编码色(原片即如此渲染),params 可覆盖
+    gax.axhline(0, color=p.get("axis_color", "#4a5080"), lw=1.0)
     z1, z2 = math.pi / 12, 5 * math.pi / 12
     ba = appear(lt, t_band)
     if ba > 0.2:

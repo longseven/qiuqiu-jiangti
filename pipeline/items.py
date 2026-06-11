@@ -175,7 +175,7 @@ def it_quiz(ctx, fig, ax, it):
     lt = ctx.lt
     t0 = ctx.resolve(it.get("t"))
     reveal = ctx.resolve(it.get("reveal", it.get("t")))
-    if lt < t0:
+    if lt < t0 or lt > reveal + it.get("hold_after", 2.4):
         return
     x, y = it.get("pos", [4.5, 10.2])
     accent = ctx.col(it.get("color"), C.BLUE)
