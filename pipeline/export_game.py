@@ -14,9 +14,29 @@ import glob
 import json
 import math
 import os
+import re
 import shutil
 
 from .items import Ctx
+
+
+def tex_plain(s):
+    """mathtext -> 游戏 HUD 用纯文本(π/∞/∪/下标等)。"""
+    s = str(s or "")
+    s = s.replace("\\,", " ").replace("\\!", "").replace("\\;", " ")
+    s = s.replace("\\quad", " ").replace("\\qquad", "  ")
+    s = re.sub(r"\\mathrm\{([^{}]*)\}", r"\1", s)
+    for _ in range(3):                                   # 嵌套分式逐层展开
+        s = re.sub(r"\\[dt]?frac\{([^{}]+)\}\{([^{}]+)\}", r"\1/\2", s)
+    s = (s.replace("\\pi", "π").replace("\\infty", "∞").replace("\\cup", "∪")
+          .replace("\\in", "∈").replace("\\left", "").replace("\\right", "")
+          .replace("\\cos", "cos").replace("\\sin", "sin").replace("\\sqrt", "√"))
+    s = re.sub(r"\^\{([^{}]+)\}", r"^(\1)", s)
+    s = re.sub(r"_\{?1\}?", "₁", s)
+    s = re.sub(r"_\{?2\}?", "₂", s)
+    s = re.sub(r"_\{?3\}?", "₃", s)
+    s = re.sub(r"[${}]", "", s)
+    return re.sub(r"\s+", " ", s).strip()
 
 # 本题缺省互动(scene.game 缺失时注入;选项可用 ^ 上标记号,由前端排版)
 DEFAULT_INTERACTIONS = {
@@ -113,7 +133,8 @@ def export(storyboard_path, builddir, outdir):
             "bubbles": sorted(bubbles, key=lambda b: b["at"]),
             "interactions": sorted(inters, key=lambda i: i["at"]),
             "xp": sc.get("xp", 0), "combo": sc.get("combo", ""),
-            "final": bool(sc.get("final")), "rows": sc.get("rows", []),
+            "final": bool(sc.get("final")),
+            "rows": [{**r, "plain": tex_plain(r.get("tex", ""))} for r in sc.get("rows", [])],
             "cta": sc.get("cta", ""),
         })
 

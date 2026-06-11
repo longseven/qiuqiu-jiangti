@@ -76,14 +76,17 @@ function el(i){return document.getElementById(i)}
 let ctx=cv.getContext("2d"), W=0,H=0,S=1,DPR=Math.min(devicePixelRatio||1,2.5);
 
 function fit(){
-  const vw=innerWidth,vh=innerHeight, ar=9/16;
+  // 隐藏标签页/嵌入环境可能拿到 0 尺寸,用默认竖屏兜底,可见时 resize 会重算
+  const vw=innerWidth||390, vh=innerHeight||693, ar=9/16;
   let w=Math.min(vw,vh*ar), h=w/ar;
   wrap.style.width=w+"px";wrap.style.height=h+"px";
   wrap.style.left=(vw-w)/2+"px";wrap.style.top=(vh-h)/2+"px";
   cv.width=w*DPR;cv.height=h*DPR;W=w;H=h;S=w/9;
   ctx.setTransform(DPR,0,0,DPR,0,0);
 }
-addEventListener("resize",fit);fit();
+addEventListener("resize",fit);
+document.addEventListener("visibilitychange",fit);
+fit();
 const U=(x,y)=>[x*S,H-y*S];               // 逻辑单位(9x16, y朝上)→ 画布像素
 
 /* ---------------- WebAudio SFX(与 pipeline/sfx.py 同配方) ---------------- */
@@ -117,6 +120,12 @@ const g3=x=>3*Math.SQRT2*Math.exp(x)*Math.cos(3*x+Math.PI/4);
 
 /* ---------------- 画布小元件 ---------------- */
 function rr(x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r)}
+function pill(x,y,txt,bg,size,fg){   // 药丸标签(先画底再画字)
+  ctx.font=`800 ${size*S/28}px "PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif`;
+  const w=ctx.measureText(txt).width+0.9*S,[px,py]=U(x,y);
+  ctx.fillStyle=bg;rr(px-w/2,py-.48*S,w,.96*S,.48*S);ctx.fill();
+  ctx.fillStyle=fg||"#fff";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(txt,px,py);
+}
 function text(s,x,y,size,color,align="center",weight=800){
   ctx.fillStyle=color;ctx.font=`${weight} ${size*S/28}px "PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif`;
   ctx.textAlign=align;ctx.textBaseline="middle";const[p,q]=U(x,y);ctx.fillText(s,p,q);
@@ -150,8 +159,8 @@ function drawMascot(x,y,s,expr,t){       // mascot.py 的 canvas 移植(常用�
     ctx.moveTo(cx-0.06*R,ey-0.04*R);ctx.lineTo(cx+0.06*R,ey-0.04*R);ctx.stroke();}
   else for(const sg of[-1,1]){const gx=cx+sg*ex;
     if(expr==="love"){star(gx,ey,0.30*R,BULB,"#caa23a")}
-    else if(expr==="wink"&&sg>0){arc(gx,ey,0.25*R,EYE,.07*R,1.05,1.95,true)}
-    else if(["happy","cheer","thumbsup"].includes(expr)||blink){arc(gx,ey,0.25*R,EYE,.07*R,.1,.9,true)}
+    else if(expr==="wink"&&sg>0){arc(gx,ey,0.25*R,EYE,.07*R,0.1,0.9)}
+    else if(["happy","cheer","thumbsup"].includes(expr)||blink){arc(gx,ey,0.25*R,EYE,.07*R,1.1,1.9)}
     else{ctx.fillStyle="#fff";ctx.strokeStyle=EYE;ctx.lineWidth=.04*R;
       ctx.beginPath();ctx.arc(gx,ey,0.30*R,0,7);ctx.fill();ctx.stroke();
       const lk={think:[-.4,-.5],panic:[0,-.5],point:[.55,0]}[expr]||[0,0];
@@ -164,19 +173,18 @@ function drawMascot(x,y,s,expr,t){       // mascot.py 的 canvas 移植(常用�
   const my=cy+0.42*R;
   ctx.strokeStyle=EYE;ctx.lineWidth=Math.max(2.5,.07*R);
   if(["happy","cheer","wave","point","love","wink","cool","thumbsup","idea"].includes(expr)){
-    arc(cx,my,0.28*R,EYE,.08*R,1.1,1.9,true)}
+    arc(cx,my,0.28*R,EYE,.08*R,0.1,0.9)}
   else if(expr==="panic"||expr==="angry"){ctx.fillStyle=EYE;ctx.beginPath();
     ctx.ellipse(cx,my+0.04*R,0.15*R,0.14*R,0,0,7);ctx.fill()}
-  else if(expr==="cry"){arc(cx,my+0.1*R,0.24*R,EYE,.08*R,.1,.9,true)}
+  else if(expr==="cry"){arc(cx,my+0.1*R,0.24*R,EYE,.08*R,1.1,1.9)}
   else{ctx.beginPath();ctx.moveTo(cx-0.18*R,my);ctx.lineTo(cx+0.18*R,my);ctx.stroke()}
   if(expr==="panic")drop(cx+1.02*R,cy-0.55*R,0.13*R,"#6cc6ff");
   if(expr==="cry"){drop(cx-0.36*R,cy+0.28*R,.11*R,"#6cc6ff");drop(cx+0.36*R,cy+0.28*R,.11*R,"#6cc6ff")}
   if(expr==="idea"){ctx.fillStyle=BULB;ctx.strokeStyle="#caa23a";ctx.lineWidth=.04*R;
     ctx.beginPath();ctx.arc(cx,cy-1.7*R,0.32*R,0,7);ctx.fill();ctx.stroke();
     ctx.fillStyle="#caa23a";ctx.fillRect(cx-0.12*R,cy-1.42*R,0.24*R,0.14*R);}
-  function arc(x,y,r,c,w,a0,a1,smile){ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();
-    ctx.arc(x,y,r,(smile?a0:a0)*Math.PI*(smile?.2+0:1),0,false);
-    ctx.beginPath();ctx.arc(x,y,r,Math.PI*a0,Math.PI*a1,false);ctx.stroke();}
+  function arc(x,y,r,c,w,a0,a1){ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();
+    ctx.arc(x,y,r,Math.PI*a0,Math.PI*a1,false);ctx.stroke();}
   function star(x,y,r,fill,edge){ctx.fillStyle=fill;ctx.strokeStyle=edge;ctx.lineWidth=.03*R;
     ctx.beginPath();for(let k=0;k<10;k++){const an=Math.PI/2+k*Math.PI/5,rad=k%2?r*.42:r;
       ctx[k?"lineTo":"moveTo"](x+rad*Math.cos(an),y-rad*Math.sin(an));}
@@ -235,6 +243,16 @@ function graph(vp,xlim,ylim){
   return m;
 }
 
+// 各关图象视口(渲染与判定共用,不依赖渲染循环先跑)
+function sceneGV(){
+  if(!G.scene)return null;
+  const vp={x:1.0,y:6.6,w:7.0,h:5.4};
+  if(G.scene.id==="part1")return graph(vp,[1.15,1.85],[-5,8]);
+  if(G.scene.id==="part2")return graph(vp,[0,Math.PI/2],[-0.55,1.2]);
+  if(G.scene.id==="part3")return graph(vp,[0,1.42],[-10.5,6]);
+  return null;
+}
+
 /* ---------------- 游戏状态 ---------------- */
 const G={si:-1,scene:null,phase:"title",t0:performance.now(),lt:0,
   audio:null,bubble:null,inter:null,interIdx:0,fails:0,
@@ -244,6 +262,14 @@ const G={si:-1,scene:null,phase:"title",t0:performance.now(),lt:0,
   totalInters:0,doneInters:0};
 D.scenes.forEach(s=>G.totalInters+=s.interactions.length);
 const AUD={};D.scenes.forEach(s=>{if(s.audio){AUD[s.id]=new Audio(s.audio);AUD[s.id].preload="auto";}});
+async function preloadAudio(){
+  // 转 Blob URL:不依赖服务器 Range 支持也能 seek(答错重听本句必需)
+  await Promise.all(D.scenes.filter(s=>s.audio).map(async s=>{
+    try{const b=await(await fetch(s.audio)).blob();
+        const a=new Audio(URL.createObjectURL(b));a.preload="auto";AUD[s.id]=a;}
+    catch(e){/* file:// 等场景退回直连,多数服务器本身支持 Range */}
+  }));
+}
 
 function showBanner(t,sub,color){ui.banner.textContent=t;ui.banner.style.color=color||COL.BLUE;
   ui.banner.style.opacity=t?1:0;ui.sub.textContent=sub||"";ui.sub.style.opacity=sub?1:0;}
@@ -255,6 +281,7 @@ function nextScene(){
   if(G.si>=D.scenes.length){G.phase="end";return;}
   G.scene=D.scenes[G.si];G.phase=G.scene.template;G.t0=performance.now();
   G.v3={x3:null,x2:null,x3done:false,x2done:false};G.aVal=.4;G.aim.angle=1.2;
+  GV=sceneGV();                       // 视口随场景重建(判定不依赖渲染循环)
   const a=AUD[G.scene.id];
   if(a){a.currentTime=0;a.play();G.audio=a;
     a.onended=()=>{if(!G.inter)setTimeout(()=>{if(!G.inter&&D.scenes[G.si]===G.scene)nextScene()},600)};}
@@ -365,6 +392,7 @@ function onDown(e){const p=evPos(e);pointer={down:true,...p};
 }
 function dragMove(p){
   if(!pointer.down||!G.drag)return;
+  if(!GV)GV=sceneGV();
   if(G.drag==="aim"&&GV){const px=GV.px(Math.PI/2),py=GV.py(0);
     G.aim.angle=Math.atan2(-(p.y-py),p.x-px);}
   else if(G.drag==="range"&&GV){
@@ -389,6 +417,9 @@ function dragMove(p){
 addEventListener("pointerdown",onDown);
 addEventListener("pointermove",e=>dragMove(evPos(e)));
 addEventListener("pointerup",()=>pointer.down=false);
+// click 兜底(部分环境只派发 click 不派发 pointerdown);守卫保证不与 pointerdown 重复生效
+ui.tapgo.onclick=()=>{ if(G.phase==="title")startGame();
+  else if(ui.tapgo.style.display!=="none")nextScene(); };
 
 function mascotPos(){
   if(G.phase==="part")return[1.5,5.0,0.7];
@@ -396,8 +427,9 @@ function mascotPos(){
   if(["clear","summary"].includes(G.phase))return[4.5,3.4,1.0];
   return null;
 }
-function trueAngle(){return Math.atan2(M.slope1*(GV.vp.h/(GV.ylim[1]-GV.ylim[0])),
-                                       (GV.vp.w/(GV.xlim[1]-GV.xlim[0])))}
+function trueAngle(){const gv=GV||(GV=sceneGV());
+  return Math.atan2(M.slope1*(gv.vp.h/(gv.ylim[1]-gv.ylim[0])),
+                    (gv.vp.w/(gv.xlim[1]-gv.xlim[0])))}
 
 /* ---------------- 闲手:金币 & 撒花 ---------------- */
 let lastCoin=0;
@@ -412,13 +444,13 @@ function now(){return performance.now()/1000}
 function drawHUD(){
   if(["title","card","summary"].includes(G.phase))return;
   const hp=G.hp;
-  text("压轴BOSS",0.55,15.35,17,COL.RED,"left");
-  const[bx,by]=U(2.6,15.55);ctx.fillStyle="#eef2f8";ctx.strokeStyle=COL.GRID;
-  rr(bx,by,4.0*S,0.42*S,0.21*S);ctx.fill();ctx.stroke();
-  if(hp>0){ctx.fillStyle=COL.RED;rr(bx+3,by+3,Math.max(2,(4.0*S-6)*hp),0.42*S-6,0.18*S);ctx.fill();}
-  text(hp<=0?"KO":Math.round(hp*100)+"%",7.0,15.35,16,COL.RED,"left");
-  text("🪙 "+G.coins,8.45,15.35,16,COL.GOLD,"right");
-  if(G.combo>1)text("连击 x"+G.combo,8.45,14.78,14,COL.PINK,"right");
+  text("BOSS",1.0,15.35,13,COL.RED,"center");
+  const[bx,by]=U(1.95,15.56);ctx.fillStyle="#eef2f8";ctx.strokeStyle=COL.GRID;
+  rr(bx,by,3.5*S,0.42*S,0.21*S);ctx.fill();ctx.stroke();
+  if(hp>0){ctx.fillStyle=COL.RED;rr(bx+3,by+3,Math.max(2,(3.5*S-6)*hp),0.42*S-6,0.18*S);ctx.fill();}
+  text(hp<=0?"KO!":Math.round(hp*100)+"%",5.65,15.35,13,COL.RED,"left");
+  text("🪙"+G.coins,8.55,15.35,15,COL.GOLD,"right");
+  if(G.combo>1)text("连击x"+G.combo,8.55,14.75,13,COL.PINK,"right");
 }
 
 /* ---------------- 各场景渲染 ---------------- */
@@ -456,20 +488,20 @@ function draw(){
   }
 }
 function drawTitle(t){
-  text("球球大战",4.5,11.6,46,COL.BLUE);text("压轴 BOSS",4.5,10.2,46,COL.RED);
-  text("边听讲 · 边动手 · 三关打爆导数压轴",4.5,8.6,17,COL.MUTED);
+  text("球球大战",4.5,11.8,44,COL.BLUE);text("压轴 BOSS",4.5,10.3,44,COL.RED);
+  text("边听讲 · 边动手 · 三关打爆导数压轴",4.5,8.8,13,COL.MUTED);
   drawBoss(6.3,6.3,0.85,t,0);drawMascot(2.4,6.1,0.95,"cheer",t);
   text("🔊 戴上耳机食用更佳",4.5,3.4,14,COL.MUTED);
   ui.tapgo.style.display="flex";ui.tapgo.firstElementChild.textContent="▶ 点击开战";
 }
-function startGame(){ac();G.phase="boot";SFX.fanfare();
-  ui.tapgo.style.display="none";setTimeout(nextScene,300);}
+function startGame(){if(G.phase!=="title")return;
+  ac();G.phase="boot";SFX.fanfare();
+  ui.tapgo.firstElementChild.textContent="加载中…";
+  Promise.race([preloadAudio(),new Promise(r=>setTimeout(r,4000))])
+    .then(()=>{ui.tapgo.style.display="none";nextScene();});}
 function drawHook(t){
   const sc=G.scene;
-  text(sc.tag||"导数压轴 · 三关挑战",4.5,13.6,20,"#fff");
-  const[tx,ty]=U(4.5,13.6);ctx.globalCompositeOperation="destination-over";
-  ctx.fillStyle=COL.RED;rr(tx-2.4*S,ty-.4*S,4.8*S,.8*S,.4*S);ctx.fill();
-  ctx.globalCompositeOperation="source-over";
+  pill(4.5,13.6,sc.tag||"导数压轴 · 三关挑战",COL.RED,18);
   text(sc.title||"三连闯关!",4.5,11.9,42,COL.BLUE);
   drawBoss(5.9,8.6,0.95+.04*Math.sin(t*2),t,G.bossHurt);
   text("BOSS",5.9,6.5,15,COL.RED);
@@ -483,17 +515,13 @@ function drawCard(t){
   text(G.scene.title||"",4.5,8.9,38,COL.WHITE);
   if(G.lt>0.6)text("READY?",4.5,7.2,26,c);
   drawMascot(4.5,4.2,1.1,"cheer",t);
-  if(G.lt>1.9)nextScene();
 }
 function drawPart(t){
   const sc=G.scene,c=partColor();
-  // 关卡标签
-  text(`关${sc.idx} · ${sc.title}`,4.5,14.3,22,"#fff");
-  const[tx,ty]=U(4.5,14.3);ctx.globalCompositeOperation="destination-over";
-  ctx.fillStyle=c;rr(tx-2.6*S,ty-.45*S,5.2*S,.9*S,.45*S);ctx.fill();
-  ctx.globalCompositeOperation="source-over";
+  pill(4.5,14.3,`关${sc.idx} · ${sc.title}`,c,20);
   // 图象
-  if(sc.id==="part1"){GV=graph({x:1.0,y:6.6,w:7.0,h:5.4},[1.15,1.85],[-5,8]);
+  GV=sceneGV();
+  if(sc.id==="part1"){
     GV.panel();GV.curve(f1,COL.BLUE,3,Math.min(1,G.lt/1.6));
     GV.dot(Math.PI/2,0,COL.PINK,8);
     text("切点 (π/2, 0)",6.9,7.1,13,COL.PINK);
@@ -510,7 +538,7 @@ function drawPart(t){
         text(d<=6*Math.PI/180?"就是现在!发射!":"还没贴合…继续拧",4.5,5.6,15,
              d<=6*Math.PI/180?COL.GREEN:COL.MUTED);}}
   }
-  else if(sc.id==="part2"){GV=graph({x:1.0,y:6.6,w:7.0,h:5.4},[0,Math.PI/2],[-0.55,1.2]);
+  else if(sc.id==="part2"){
     GV.panel();GV.curve(h2,COL.GOLD,3,Math.min(1,G.lt/1.6));
     const locking=G.inter&&G.inter.type==="range_lock";
     if(locking||G.interIdx>1){
@@ -523,7 +551,7 @@ function drawPart(t){
       else text("安全!没有交点",4.5,5.6,15,COL.GREEN);}
     function GVy(y){return (H-GV.py(y))/S}
   }
-  else if(sc.id==="part3"){GV=graph({x:1.0,y:6.6,w:7.0,h:5.4},[0,1.42],[-10.5,6]);
+  else if(sc.id==="part3"){
     GV.panel();GV.curve(g3,COL.GREEN,3,Math.min(1,G.lt/1.6));GV.hline(0,COL.GS);
     const v=G.v3, dragging=G.inter&&G.inter.type==="valley_drag";
     if(dragging||G.interIdx>1){
@@ -554,16 +582,15 @@ function drawClear(t){
   if(G.scene.xp)text(`+${G.scene.xp} XP`,4.5,9.0,30,COL.GOLD);
   if(G.scene.combo)text(G.scene.combo,4.5,7.6,20,COL.PINK);
   drawMascot(4.5,3.9,1.1,"thumbsup",t);
-  if(G.lt>2.6)nextScene();
 }
 function drawSummary(t){
-  text("三关 · 全通关!",4.5,13.4,40,COL.GOLD);
+  text("三关 · 全通关!",4.5,13.4,32,COL.GOLD);
   const acc=G.totalInters?Math.max(0,1-G.retries/(G.totalInters*2)):1;
   const stars=acc>0.8?3:acc>0.5?2:1;
   text("★".repeat(stars)+"☆".repeat(3-stars),4.5,11.8,44,COL.GOLD);
   text(`金币 ${G.coins} · 重试 ${G.retries} 次`,4.5,10.4,18,COL.MUTED);
   const rows=G.scene&&G.scene.rows||[];
-  rows.forEach((r,i)=>text(`${r.idx}  ${stripTex(r.tex)}`,4.5,9.2-i*1.0,15,COL[r.accent]||COL.WHITE));
+  rows.forEach((r,i)=>text(`${r.idx}  ${r.plain||stripTex(r.tex)}`,4.5,9.2-i*1.0,15,COL[r.accent]||COL.WHITE));
   text("你卡在第几关?评论区告诉我!",4.5,5.4,17,COL.PINK);
   drawMascot(4.5,3.2,1.0,"cheer",t);
   ui.tapgo.style.display="flex";ui.tapgo.firstElementChild.textContent="↻ 再战一局";
@@ -572,6 +599,13 @@ function drawSummary(t){
 function stripTex(s){return String(s||"").replace(/\\(mathrm|frac|left|right|in|cup|infty|pi)/g,"")
   .replace(/[${}\\]/g,"").replace(/\s+/g," ")}
 draw();
+// 逻辑心跳与渲染解耦:标签页后台时 rAF 被节流,互动调度与场景推进不能停
+setInterval(()=>{
+  const lt=(performance.now()-G.t0)/1000;
+  if(G.phase==="card"&&lt>1.9)nextScene();
+  else if(G.phase==="clear"&&lt>2.6)nextScene();
+  else checkInteractions();
+},200);
 </script>
 </body>
 </html>

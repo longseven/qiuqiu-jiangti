@@ -92,6 +92,21 @@ storyboard.json ──► lint(渲染正确性硬门槛)
 | `tools/render_original.py` | 用原版代码渲染对比帧(P0 验收) |
 | `球球讲题/` | 原始代码基线(参考,勿改) |
 
+## 边听边玩 H5 游戏(同一份分镜直接导出)
+
+讲解音频是游戏的"关卡脚本":讲到第 N 句触发互动(quiz / 切线瞄准 /
+安全区锁定 / 三球归谷),互动不过音频不往下走,答错回跳本句重听。
+设计见 [游戏设计.md](游戏设计.md);互动定义在 storyboard 的
+`scene.game.interactions`(视频渲染器忽略该字段)。
+
+```bash
+# 先跑过 dub(游戏复用 TTS 音频与句锚点),然后导出
+./venv/bin/python -m pipeline.export_game storyboards/daoshu_chuangguan_v2.json \
+    --builddir build/daoshu_chuangguan_v2 --outdir game/daoshu_v2
+# 任意静态服务器打开(或直接发给手机浏览器)
+./venv/bin/python -m http.server 8000 --directory game/daoshu_v2
+```
+
 ## 下一阶段(见开发方案)
 
 - **P1** 解三角形题型插件组 + 第二道题零渲染代码改动出片

@@ -1,0 +1,279 @@
+{
+  "meta": {
+    "title": "导数压轴三连闯关 · 趣味版",
+    "ratio": "9:16",
+    "theme": "paper",
+    "voice": "zh-CN-XiaoyiNeural",
+    "rate": "+18%",
+    "pitch": "+20Hz",
+    "fps": 24,
+    "boss": true,
+    "boss_label": "压轴BOSS",
+    "sfx": true
+  },
+  "scenes": [
+    {
+      "id": "hook",
+      "template": "hook",
+      "accent": "BLUE",
+      "narration": "e 的 x 次方乘 cos 三 x,这函数一出场,百分之九十的人直接缴械!你以为要硬算到天亮?错,三关各藏一个机关,踩对就速通,跟球球冲!",
+      "min_dur": 8.0,
+      "max_dur": 16.0,
+      "tag": "导数压轴 · 三关速通",
+      "title": "BOSS 来袭!",
+      "boss_intro": { "t": "@sent:1+1.0", "name": "导数压轴 BOSS", "skills": ["切线", "零点", "不等式"], "pos": [4.5, 8.5], "s": 0.85 },
+      "mascot": {
+        "pos": [2.0, 4.2], "s": 0.95,
+        "enter": { "action": "roll_in", "dur": 1.1 },
+        "moods": [
+          { "t": 0.0, "expr": "panic" },
+          { "t": "@sent:3", "expr": "angry" }
+        ],
+        "lines": [
+          { "t": "@sent:1+0.5", "text": "劝退函数,正面刚!", "color": "PINK" },
+          { "t": "@sent:2+0.2", "text": "机关我全踩过!", "color": "BLUE" },
+          { "t": "@sent:3+0.6", "text": "冲冲冲!", "color": "GOLD" }
+        ]
+      },
+      "items": [
+        { "t": 0.3, "type": "danmaku", "text": "劝退函数+1", "lane": 0 },
+        { "t": 0.7, "type": "danmaku", "text": "蹲机关", "lane": 0 }
+      ]
+    },
+    {
+      "id": "card1",
+      "template": "card",
+      "accent": "BLUE",
+      "idx": "①",
+      "title": "切线方程",
+      "narration": "",
+      "min_dur": 2.5,
+      "max_dur": 2.5,
+      "items": [ { "t": 0.25, "type": "danmaku", "text": "第一关:热身局", "lane": 0 } ]
+    },
+    {
+      "id": "part1",
+      "template": "part",
+      "accent": "BLUE",
+      "idx": "①",
+      "title": "切线方程",
+      "narration": "第一关切线,通关招式两件套:切点加斜率,集齐直接写点斜式!先拿切点,x 等于二分之π代进去,你以为要硬算两大坨?三、二、一!是零!cos 二分之三π和 cos 二分之π双双归零,两项直接团灭,切点白白送到 x 轴上!再拿斜率,乘积求导别漏项,代入一算,f 撇等于四倍 e 的二分之π。点斜式一套:y 等于四倍 e 的二分之π,乘括号 x 减二分之π,第一关破!",
+      "min_dur": 26.0,
+      "max_dur": 60.0,
+      "graph": { "plugin": "derivative.tangent", "params": {} },
+      "game": {
+        "interactions": [
+          { "at_sent": 2, "type": "quiz", "question": "代入 x=π/2,f(π/2) 等于?", "options": ["e^(π/2)", "0", "-2e^(π/2)"], "answer": 1, "hint": "cos(3π/2) 和 cos(π/2) 都是 0,两项全灭!" },
+          { "at_sent": 6, "type": "tangent_shot", "hint": "斜率 4e^(π/2) 很陡,把准星拧到和曲线刚好贴上再发射" }
+        ]
+      },
+      "items": [
+        { "t": 0.02, "type": "formula", "tex": "$a=\\mathrm{e}^{-\\pi}:\\ f(x)=\\mathrm{e}^{x}\\cos 3x-\\mathrm{e}^{-\\pi}\\mathrm{e}^{3x}\\cos x$", "pos": [4.5, 13.0], "size": 19, "color": "WHITE" },
+        { "t": "@sent:2", "reveal": "@sent:4", "type": "quiz", "question": "代入 x=π/2,f(π/2) 等于?", "options": ["$\\mathrm{e}^{\\pi/2}$", "$0$", "$-2\\,\\mathrm{e}^{\\pi/2}$"], "answer": 1, "countdown": 3, "pos": [4.5, 11.4], "color": "BLUE" },
+        { "t": "@sent:6", "type": "formula", "tex": "$f'(x)=\\mathrm{e}^{x}(\\cos 3x-3\\sin 3x)$", "pos": [4.5, 11.85], "size": 24, "color": "MUTED" },
+        { "t": "@sent:6+1.2", "type": "formula", "tex": "$\\qquad-\\,\\mathrm{e}^{-\\pi}\\mathrm{e}^{3x}(3\\cos x-\\sin x)$", "pos": [4.5, 10.75], "size": 24, "color": "MUTED" },
+        { "t": "@sent:6+2.6", "type": "formula", "tex": "$f\\!\\left(\\frac{\\pi}{2}\\right)=0,\\quad f'\\!\\left(\\frac{\\pi}{2}\\right)=4\\,\\mathrm{e}^{\\frac{\\pi}{2}}$", "pos": [4.5, 9.5], "size": 30, "color": "BLUE" },
+        { "t": "@sent:7", "type": "answer", "tex": "$y=4\\,\\mathrm{e}^{\\frac{\\pi}{2}}\\!\\left(x-\\frac{\\pi}{2}\\right)$", "pos": [4.5, 8.0], "size": 34, "color": "GOLD", "cheer": "一血!", "cheer_pos": [7.5, 9.5] },
+        { "t": 0.15, "type": "danmaku", "text": "先代值?学到了", "lane": 0 },
+        { "t": 0.42, "type": "danmaku", "text": "我猜是 0", "lane": 0 },
+        { "t": 0.88, "type": "danmaku", "text": "点斜式yyds", "lane": 0 }
+      ],
+      "mascot": {
+        "pos": [1.5, 6.4], "s": 0.68,
+        "moods": [
+          { "t": 0.0, "expr": "think" },
+          { "t": "@sent:5", "expr": "point" },
+          { "t": "@sent:7", "expr": "happy" }
+        ],
+        "lines": [
+          { "t": "@sent:1+0.5", "text": "热身局,但有坑", "color": "BLUE" },
+          { "t": "@sent:2+0.3", "text": "弹幕扣答案!", "color": "GOLD" },
+          { "t": "@sent:5+0.3", "text": "零元购切点!", "color": "GREEN" },
+          { "t": "@sent:6+0.3", "text": "斜率到账!", "color": "BLUE" },
+          { "t": "@sent:7+0.5", "text": "一血!稳!", "color": "GOLD" }
+        ]
+      }
+    },
+    {
+      "id": "clear1",
+      "template": "clear",
+      "accent": "BLUE",
+      "idx": "①",
+      "xp": 500,
+      "crit": true,
+      "narration": "",
+      "min_dur": 3.0,
+      "max_dur": 3.0,
+      "items": [
+        { "t": 0.25, "type": "danmaku", "text": "一血到手", "lane": 0 },
+        { "t": 0.6, "type": "danmaku", "text": "+500 XP", "lane": 1 }
+      ]
+    },
+    {
+      "id": "card2",
+      "template": "card",
+      "accent": "GOLD",
+      "idx": "②",
+      "title": "取值范围",
+      "narration": "",
+      "min_dur": 2.5,
+      "max_dur": 2.5,
+      "items": [ { "t": 0.25, "type": "danmaku", "text": "第二关:参数 a 开始整活", "lane": 0 } ]
+    },
+    {
+      "id": "part2",
+      "template": "part",
+      "accent": "GOLD",
+      "idx": "②",
+      "title": "取值范围",
+      "narration": "第二关,f 没有零点,求 a 的范围,招式名:分参流!把 a 拎到一边,有零点就是 a 撞进值域,没零点就是躲出去!移项后用三倍角拆开 cos 三 x,区间里 cos x 是正的,放心约掉,a 就等于二 cos 二 x 减一,除以 e 的二 x 次方。换元 t 等于二 x,h 求导一验,一路单调下坡,从一滑到负 e 的负二分之π。灵魂拷问:a 正好等于一,区间里有没有零点?三、二、一!没有!区间是开的,两头的值根本取不到,a 等于一照样安全,等号放心带上!所以 a 小于等于负 e 的负二分之π,或者大于等于一,第二关破!",
+      "min_dur": 30.0,
+      "max_dur": 60.0,
+      "graph": { "plugin": "derivative.h_mono", "params": {} },
+      "game": {
+        "interactions": [
+          { "at_sent": 5, "type": "quiz", "question": "a=1 时,(0, π/4) 内有零点吗?", "options": ["有,靠近 0 处", "刚好一个零点", "没有,1 取不到"], "answer": 2, "hint": "区间是开的,h(t) 到不了 1,等号安全!" },
+          { "at_sent": 9, "type": "range_lock", "hint": "把 a 拖出 (-e^(-π/2), 1) 这个值域,曲线就碰不到横线了" }
+        ]
+      },
+      "items": [
+        { "t": 0.03, "type": "formula", "tex": "$f(x)=0\\ \\Rightarrow\\ \\mathrm{e}^{x}\\cos 3x=a\\,\\mathrm{e}^{3x}\\cos x$", "pos": [4.5, 13.0], "size": 20, "color": "WHITE" },
+        { "t": "@sent:3+0.5", "type": "formula", "tex": "$\\cos 3x=\\cos x\\,(2\\cos 2x-1)$", "pos": [4.5, 11.85], "size": 23, "color": "MUTED" },
+        { "t": "@sent:3+4.0", "type": "formula", "tex": "$\\Rightarrow\\ \\dfrac{2\\cos 2x-1}{\\mathrm{e}^{2x}}=a$", "pos": [4.5, 10.7], "size": 23, "color": "MUTED" },
+        { "t": "@sent:4+0.5", "type": "formula", "tex": "$t=2x:\\ h(t)=\\dfrac{2\\cos t-1}{\\mathrm{e}^{t}}\\ \\,$ 递减 (见图)", "pos": [4.5, 9.45], "size": 22, "color": "WHITE" },
+        { "t": "@sent:5", "reveal": "@sent:7", "type": "quiz", "question": "a=1 时,(0, π/4) 内有零点吗?", "options": ["有,靠近 0 处", "刚好一个零点", "没有,1 取不到"], "answer": 2, "countdown": 3, "pos": [4.5, 8.3], "color": "GOLD" },
+        { "t": "@sent:9", "type": "answer", "tex": "$a\\in\\left(-\\infty,-\\mathrm{e}^{-\\frac{\\pi}{2}}\\right]\\cup\\left[1,+\\infty\\right)$", "pos": [4.5, 8.05], "size": 26, "color": "GOLD", "cheer": "双杀!", "cheer_pos": [7.5, 8.7] },
+        { "t": 0.08, "type": "danmaku", "text": "反着想,妙", "lane": 0 },
+        { "t": 0.55, "type": "danmaku", "text": "等号党集合", "lane": 0 },
+        { "t": 0.9, "type": "danmaku", "text": "差点忘了开区间", "lane": 0 }
+      ],
+      "mascot": {
+        "pos": [1.5, 6.4], "s": 0.68,
+        "moods": [
+          { "t": 0.0, "expr": "think" },
+          { "t": "@sent:4", "expr": "cool" },
+          { "t": "@sent:9", "expr": "happy" }
+        ],
+        "lines": [
+          { "t": "@sent:2+0.3", "text": "a 同学,出列!", "color": "GOLD" },
+          { "t": "@sent:3+0.5", "text": "三倍角,隐藏装备", "color": "BLUE" },
+          { "t": "@sent:4+0.5", "text": "滑滑梯函数~", "color": "PINK" },
+          { "t": "@sent:5+0.3", "text": "敢不敢扣答案?", "color": "GOLD" },
+          { "t": "@sent:8+0.3", "text": "开区间立大功!", "color": "GREEN" }
+        ]
+      }
+    },
+    {
+      "id": "clear2",
+      "template": "clear",
+      "accent": "GOLD",
+      "idx": "②",
+      "xp": 800,
+      "combo": "连击 x2!",
+      "crit": true,
+      "narration": "",
+      "min_dur": 3.0,
+      "max_dur": 3.0,
+      "items": [
+        { "t": 0.25, "type": "danmaku", "text": "双杀!手感来了", "lane": 0 },
+        { "t": 0.6, "type": "danmaku", "text": "+800 XP", "lane": 1 }
+      ]
+    },
+    {
+      "id": "card3",
+      "template": "card",
+      "accent": "GREEN",
+      "idx": "③",
+      "title": "不等式证明",
+      "narration": "",
+      "min_dur": 2.5,
+      "max_dur": 2.5,
+      "items": [ { "t": 0.25, "type": "danmaku", "text": "决战:压轴 BOSS", "lane": 0 } ]
+    },
+    {
+      "id": "part3",
+      "template": "part",
+      "accent": "GREEN",
+      "idx": "③",
+      "title": "不等式证明",
+      "narration": "最终 BOSS,招式两段斩:不解方程,拆成两条小不等式,相加碾过四分之三π!a 等于零,二 f 加 f 撇辅助角一合,g 现出原形:三根号二,乘 e 的 x 次方,乘 cos 三 x 加四分之π。g 小于零,三个点全锁进十二分之π到十二分之五π的山谷。提问:要是没有 e 的 x 次方,等高的 x 一加 x 三等于多少?三、二、一!恰好二分之π,山谷关于四分之π对称!可 e 的 x 次方把右边的谷挖得更深,图象右偏,x 一加 x 三被硬推过二分之π!x 二更绝:它的导数等于 g x 一,还是负数,反证一摆,只能站到四分之π右边!两条一加,大于四分之三π,BOSS 倒地!",
+      "min_dur": 34.0,
+      "max_dur": 60.0,
+      "graph": { "plugin": "derivative.valley", "params": {} },
+      "game": {
+        "interactions": [
+          { "at_sent": 4, "type": "quiz", "question": "若没有 e^x 因子,x₁+x₃ 等于?", "options": ["恰好 = π/2", "大于 π/2", "小于 π/2"], "answer": 0, "hint": "纯余弦的山谷关于 π/4 对称,等高点的和恰好是 π/2" },
+          { "at_sent": 8, "type": "valley_drag", "hint": "先把 x₃ 拖到与 x₁ 等高,再把 x₂ 拖到谷内切线平行虚线处" }
+        ]
+      },
+      "items": [
+        { "t": 0.02, "type": "formula", "tex": "$a=0:\\ g(x)=2f(x)+f'(x)$", "pos": [4.5, 13.0], "size": 23, "color": "GREEN" },
+        { "t": "@sent:2+1.5", "type": "formula", "tex": "$\\qquad=3\\sqrt{2}\\,\\mathrm{e}^{x}\\cos\\!\\left(3x+\\frac{\\pi}{4}\\right)$", "pos": [4.5, 11.85], "size": 23, "color": "GREEN" },
+        { "t": "@sent:3+0.5", "type": "formula", "tex": "$g(x)<0\\ \\Leftrightarrow\\ x\\in\\!\\left(\\frac{\\pi}{12},\\frac{5\\pi}{12}\\right)$", "pos": [4.5, 10.55], "size": 24, "color": "WHITE" },
+        { "t": "@sent:4", "reveal": "@sent:6", "type": "quiz", "question": "若没有 $\\mathrm{e}^{x}$ 因子,$x_1+x_3$ 等于?", "options": ["$=\\frac{\\pi}{2}$", "$>\\frac{\\pi}{2}$", "$<\\frac{\\pi}{2}$"], "answer": 0, "countdown": 3, "pos": [4.5, 8.8], "color": "GREEN" },
+        { "t": "@sent:7+0.5", "type": "formula", "tex": "$x_1+x_3>\\frac{\\pi}{2}$ (图象右偏),$\\quad$ $x_2>\\frac{\\pi}{4}$", "pos": [4.5, 9.3], "size": 22, "color": "MUTED" },
+        { "t": "@sent:9", "type": "answer", "tex": "$x_1+x_2+x_3>\\frac{\\pi}{2}+\\frac{\\pi}{4}=\\frac{3\\pi}{4}$", "pos": [4.5, 7.95], "size": 27, "color": "GREEN", "cheer": "BOSS 倒地!", "cheer_pos": [7.3, 8.7] },
+        { "t": 0.06, "type": "danmaku", "text": "最难的一问来了", "lane": 0 },
+        { "t": 0.3, "type": "danmaku", "text": "辅助角神技", "lane": 0 },
+        { "t": 0.72, "type": "danmaku", "text": "原来不对称!", "lane": 0 },
+        { "t": 0.82, "type": "danmaku", "text": "这图喝多了往右歪", "lane": 0 },
+        { "t": 0.93, "type": "danmaku", "text": "丝血反杀", "lane": 0 }
+      ],
+      "mascot": {
+        "pos": [1.5, 6.4], "s": 0.68,
+        "moods": [
+          { "t": 0.0, "expr": "think" },
+          { "t": "@sent:3", "expr": "love" },
+          { "t": "@sent:7", "expr": "angry" },
+          { "t": "@sent:9", "expr": "cheer" }
+        ],
+        "lines": [
+          { "t": "@sent:1+0.5", "text": "BOSS 血条五格,冲!", "color": "PINK" },
+          { "t": "@sent:2+0.5", "text": "辅助角=合体大招", "color": "BLUE" },
+          { "t": "@sent:4+0.3", "text": "蹲一个答案!", "color": "GOLD" },
+          { "t": "@sent:7+0.3", "text": "e 是内鬼!", "color": "PINK" },
+          { "t": "@sent:9+0.5", "text": "掉落:满分!", "color": "GOLD" }
+        ]
+      }
+    },
+    {
+      "id": "clear3",
+      "template": "clear",
+      "accent": "GREEN",
+      "idx": "③",
+      "xp": 1500,
+      "combo": "连击 x3 · 完美!",
+      "final": true,
+      "crit": true,
+      "narration": "",
+      "min_dur": 4.0,
+      "max_dur": 4.0,
+      "items": [
+        { "t": 0.25, "type": "danmaku", "text": "BOSS 已击破", "lane": 0 },
+        { "t": 0.6, "type": "danmaku", "text": "全图通关!", "lane": 1 }
+      ]
+    },
+    {
+      "id": "summary",
+      "template": "summary",
+      "accent": "GOLD",
+      "narration": "三关通关,招式复盘!第一关两件套:切点加斜率,代值探路白捡零。第二关分参流:a 拎到一边,躲开值域就安全。第三关两段斩:辅助角合体,右谷更深图右偏。压轴高不可攀?拆开看,全是套路。你卡在第几关?评论区报坐标,点赞收藏,下道压轴接着刷!",
+      "min_dur": 14.0,
+      "max_dur": 24.0,
+      "title": "三关 · 全通关!",
+      "subtitle_pop": "压轴 BOSS 已击败",
+      "rows": [
+        { "idx": "①", "accent": "BLUE", "tex": "$y=4\\,\\mathrm{e}^{\\frac{\\pi}{2}}\\!\\left(x-\\frac{\\pi}{2}\\right)$" },
+        { "idx": "②", "accent": "GOLD", "tex": "$a\\in\\left(-\\infty,-\\mathrm{e}^{-\\frac{\\pi}{2}}\\right]\\cup\\left[1,+\\infty\\right)$" },
+        { "idx": "③", "accent": "GREEN", "tex": "$x_1+x_2+x_3>\\frac{3\\pi}{4}$" }
+      ],
+      "cta": "你卡在第几关?评论区报坐标!",
+      "items": [
+        { "t": 0.2, "type": "danmaku", "text": "全程高能", "lane": 0 },
+        { "t": 0.5, "type": "danmaku", "text": "卡在开区间取等的举手", "lane": 0 },
+        { "t": 0.7, "type": "danmaku", "text": "我赌是第三关", "lane": 1 },
+        { "t": 0.85, "type": "danmaku", "text": "已三连,蹲下一题", "lane": 0 }
+      ]
+    }
+  ]
+}
