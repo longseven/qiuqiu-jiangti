@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(unzip -o \"/Users/jianglong/Downloads/球球讲题代码.zip\" -d .)"
+    ]
+  }
+}
