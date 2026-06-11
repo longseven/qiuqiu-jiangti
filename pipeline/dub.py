@@ -84,19 +84,41 @@ def mock_measure(text):
     return dur, starts
 
 
-async def synth(text, voice, rate, pitch, mp3_path):
-    """合成一段;返回 (audio_dur, sent_starts)。"""
+async def _synth_once(text, voice, rate, pitch, mp3_path):
     import edge_tts
-    comm = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
+    # 显式要 WordBoundary(7.x 默认 SentenceBoundary):配合本地切句规则,
+    # 保证 "@sent:N" 的语义与 lint 校验的句数一致。
+    comm = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch,
+                                boundary="WordBoundary")
     boundaries = []
-    with open(mp3_path, "wb") as f:
+    tmp = mp3_path + ".part"
+    with open(tmp, "wb") as f:
         async for chunk in comm.stream():
             if chunk["type"] == "audio":
                 f.write(chunk["data"])
-            elif chunk["type"] == "WordBoundary":
+            elif chunk["type"] in ("WordBoundary", "SentenceBoundary"):
                 boundaries.append((chunk["offset"] / 1e7, chunk.get("text", "")))
-    dur = audio_duration(mp3_path)
-    return dur, sentence_starts(text, boundaries)
+    os.replace(tmp, mp3_path)                       # 成功才落盘,不留半截文件
+    return boundaries
+
+
+async def synth(text, voice, rate, pitch, mp3_path, retries=5, attempt_timeout=90):
+    """合成一段;返回 (audio_dur, sent_starts)。
+
+    服务偶发连接重置/悬挂:每次尝试套 wait_for 看门狗,指数退避重试。
+    """
+    last_err = None
+    for attempt in range(retries):
+        try:
+            boundaries = await asyncio.wait_for(
+                _synth_once(text, voice, rate, pitch, mp3_path),
+                timeout=attempt_timeout)
+            dur = audio_duration(mp3_path)
+            return dur, sentence_starts(text, boundaries)
+        except Exception as e:                      # 网络抖动/重置/超时
+            last_err = e
+            await asyncio.sleep(1.5 * (attempt + 1))
+    raise RuntimeError(f"TTS 合成失败(已重试 {retries} 次): {last_err}")
 
 
 def seg_key(text, voice, rate, pitch):
