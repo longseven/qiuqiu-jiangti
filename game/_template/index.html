@@ -272,6 +272,18 @@ function sceneGV(){
 }
 
 /* ---------------- 游戏状态 ---------------- */
+// 流派(英雄出装风格):决定整局规则
+const STYLES={
+  steady:{key:"steady",icon:"🛡️",name:"稳健流",lives:6,cd:10,mul:0.8,angle:5,perfect:2.2,failScore:0,
+          desc:"6 颗心 · 10 秒思考 · 战力 ×0.8<br>稳扎稳打,适合首通"},
+  burst: {key:"burst", icon:"⚔️",name:"暴力流",lives:3,cd:6, mul:1.5,angle:3,perfect:1.5,failScore:0,
+          desc:"3 颗心 · 6 秒抢答 · 判定更严 · 战力 ×1.5<br>冲王者专用"},
+  skill: {key:"skill", icon:"🧠",name:"技巧流",lives:Infinity,cd:8,mul:1.0,angle:4,perfect:1.8,failScore:80,
+          desc:"不扣心,但答错 −80 战力<br>纯刷分,心态稳"},
+};
+let STYLE=STYLES.steady;
+const FROM_MAP=new URLSearchParams(location.search).has("from");
+
 const G={si:-1,scene:null,phase:"title",t0:performance.now(),lt:0,
   audio:null,bubble:null,inter:null,interIdx:0,fails:0,
   hp:1,coins:0,combo:0,stars:{},retries:0,
@@ -369,7 +381,7 @@ function passInteraction(msg,precision){
   G.maxStreak=Math.max(G.maxStreak,G.streak);
   // 战力:基础 100 + 倒计时余量 + 精度分,连击系数 ×1.2^,双倍输出消耗一次
   let gain=Math.round((100+(it._timeLeft||0)*10+(precision||0))
-                      *Math.pow(1.2,Math.min(G.streak-1,3)))*G.dmgMult;
+                      *Math.pow(1.2,Math.min(G.streak-1,3))*STYLE.mul)*G.dmgMult;
   G.dmgMult=1;
   G.score+=gain;G.coins+=10*Math.min(G.combo,3);
   damageBoss(1/G.totalInters);SFX.ding();
@@ -382,7 +394,10 @@ function passInteraction(msg,precision){
 }
 function loseHeart(){
   if(G.shield>0){G.shield--;toast("护盾碎了!挡下致命一击",2200);SFX.buzz();return true;}
-  G.lives--;G.bossAtk=1;SFX.hurt();
+  G.bossAtk=1;SFX.hurt();
+  if(STYLE.failScore>0){                              // 技巧流:不扣心,扣战力
+    G.score=Math.max(0,G.score-STYLE.failScore);return true;}
+  G.lives--;
   if(G.lives<=0){defeat();return false;}
   return true;
 }
@@ -391,7 +406,8 @@ function failInteraction(hint){
   const alive=loseHeart();
   if(!alive)return;                                    // 阵亡页接管
   if(G.fails>=3){toast("没关系,看球球演示 → "+(hint||""),3200);autoSolve();return;}
-  toast((G.fails===1?"BOSS 反击!再想想:":"又被打了!提示:")+(hint||"再试一次!"),3000);
+  const pen=STYLE.failScore>0?`−${STYLE.failScore} 战力!`:"";
+  toast((G.fails===1?`BOSS 反击!${pen}再想想:`:`又被打了!${pen}提示:`)+(hint||"再试一次!"),3000);
   if(G.audio&&G.inter){G.audio.currentTime=Math.max(0,G.inter.sent_start);}  // 回跳重听本句
 }
 function defeat(){
@@ -405,7 +421,7 @@ function defeat(){
   ui.tapgo.firstElementChild.textContent="💀 阵亡!点击复活 · 重打本关";
 }
 function revive(){
-  G.lives=3;G.hp=Math.min(1,G.hp+0); // BOSS 血保留,玩家满状态重打本关
+  G.lives=Math.min(3,STYLE.lives);   // BOSS 血保留,玩家回血重打本关
   G.si=G.partSi-1;G.phase="boot";
   ui.tapgo.firstElementChild.textContent="▶ 点击继续";
   nextScene();
@@ -424,7 +440,7 @@ function damageBoss(d){G.hp=Math.max(0,G.hp-d);G.bossHurt=1;}
 
 function startInteraction(it){
   if(it.type==="quiz"){
-    const FULL=8;                                      // 8s 倒计时(MOBA 难度)
+    const FULL=STYLE.cd;                               // 倒计时由流派决定
     let left=FULL;
     it._timeLeft=FULL;
     ui.panel.innerHTML=`<div id="ring">${left}</div><div class="q">${mathFmt(it.question)}</div>`+
@@ -481,7 +497,7 @@ function startInteraction(it){
     toast("拖动旋转准星,把切线贴上曲线,然后发射!",3500);
     ui.btn.textContent="🎯 发射切线";ui.btn.style.display="block";
     ui.btn.onclick=()=>{const d=angDiff(G.aim.angle,trueAngle());
-      if(d<=4*Math.PI/180){const perfect=d<=1.8*Math.PI/180;
+      if(d<=STYLE.angle*Math.PI/180){const perfect=d<=STYLE.perfect*Math.PI/180;
         passInteraction(perfect?"完美贴合!暴击伤害!":"命中!切线拿下!",perfect?180:80)}
       else failInteraction(it.hint);};
     G.drag="aim";
@@ -597,10 +613,13 @@ function drawHUD(){
   if(hp>0){ctx.fillStyle=COL.RED;rr(bx+3,by+3,Math.max(2,(3.5*S-6)*hp),0.42*S-6,0.18*S);ctx.fill();}
   text(hp<=0?"KO!":Math.round(hp*100)+"%",5.65,15.35,13,COL.RED,"left");
   text("🪙"+G.coins,8.55,15.35,15,COL.GOLD,"right");
-  // 玩家生命(红心)+ 护盾 + 战力
-  for(let i=0;i<4;i++)heart(6.55+i*0.55,14.8,0.16*S,i<G.lives);
-  if(G.shield>0){ctx.strokeStyle=COL.BLUE;ctx.lineWidth=2.5;
-    const[sx,sy]=U(6.55,14.8);ctx.beginPath();ctx.arc(sx,sy,0.3*S,0,7);ctx.stroke();}
+  // 玩家生命(红心,数量随流派)+ 护盾 + 战力
+  if(isFinite(STYLE.lives)){
+    const n=STYLE.lives,x0=8.45-(n-1)*0.5;
+    for(let i=0;i<n;i++)heart(x0+i*0.5,14.8,0.15*S,i<G.lives);
+    if(G.shield>0){ctx.strokeStyle=COL.BLUE;ctx.lineWidth=2.5;
+      const[sx,sy]=U(x0,14.8);ctx.beginPath();ctx.arc(sx,sy,0.28*S,0,7);ctx.stroke();}
+  }else{heart(8.0,14.8,0.15*S,true);text("×∞",8.45,14.8,13,COL.RED,"left");}
   text("战力 "+G.score,8.55,14.25,12,COL.BLUE,"right");
   if(G.combo>1)text("连击x"+G.combo,1.0,14.8,13,COL.PINK,"left");
   if(G.dmgMult>1)text("⚔️×2",1.0,14.25,12,COL.RED,"left");
@@ -653,10 +672,19 @@ function drawTitle(t){
   ui.tapgo.style.display="flex";ui.tapgo.firstElementChild.textContent="▶ 点击开战";
 }
 function startGame(){if(G.phase!=="title")return;
-  ac();G.phase="boot";SFX.fanfare();
-  ui.tapgo.firstElementChild.textContent="加载中…";
-  Promise.race([preloadAudio(),new Promise(r=>setTimeout(r,4000))])
-    .then(()=>{ui.tapgo.style.display="none";nextScene();});}
+  ac();SFX.drum();
+  // 先选流派,再开战
+  ui.tapgo.style.display="none";
+  ui.panel.innerHTML=`<div class="q">⚔️ 选择你的流派</div>`+
+    Object.values(STYLES).map(s=>`<button class="opt" data-s="${s.key}">${s.icon} ${s.name}<br>
+      <span style="font-size:.74em;font-weight:600;opacity:.78;line-height:1.5">${s.desc}</span></button>`).join("");
+  ui.panel.style.display="block";
+  ui.panel.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{
+    STYLE=STYLES[b.dataset.s];G.lives=STYLE.lives;
+    ui.panel.style.display="none";
+    G.phase="boot";SFX.fanfare();
+    Promise.race([preloadAudio(),new Promise(r=>setTimeout(r,4000))])
+      .then(()=>nextScene());});}
 function drawHook(t){
   const sc=G.scene;
   pill(4.5,13.6,sc.tag||"导数压轴 · 三关挑战",COL.RED,18);
@@ -774,9 +802,17 @@ function drawBadge(x,y,s,color,label){                  // 盾形段位徽章
 function drawSummary(t){
   text("战 报",4.5,14.5,26,COL.WHITE);
   const rk=rankOf(G.score);
+  if(!G._saved){G._saved=true;                       // 战役进度存档
+    try{const cp=JSON.parse(localStorage.qq_campaign_v1||"{}");
+      cp.nodes=cp.nodes||{};
+      const stars=G.score>=1200?3:G.score>=600?2:1;
+      const old=cp.nodes.boss||{};
+      cp.nodes.boss={stars:Math.max(stars,old.stars||0),
+                     score:Math.max(G.score,old.score||0),rank:rk[1],style:STYLE.name};
+      localStorage.qq_campaign_v1=JSON.stringify(cp);}catch(e){}}
   drawBadge(4.5,12.3,1.0*S,rk[2]);
   text(rk[1],4.5,10.6,30,"#1f2a44");
-  text(`战力 ${G.score}`,4.5,9.7,18,COL.BLUE);
+  text(`战力 ${G.score} · ${STYLE.icon}${STYLE.name}`,4.5,9.7,17,COL.BLUE);
   // MVP 称号
   const mvp=G.retries===0?"MVP · 零失误通关":G.maxStreak>=4?"MVP · 连杀机器":
             G.deaths===0?"稳健 · 全程没死":"百折不挠 · 复活继续刚";
@@ -787,8 +823,9 @@ function drawSummary(t){
   rows.forEach((r,i)=>mathText(`${r.idx}  ${r.plain||stripTex(r.tex)}`,4.5,7.1-i*0.85,14,COL[r.accent]||COL.WHITE));
   text("敢晒段位吗?评论区报战力!",4.5,4.0,16,COL.PINK);
   drawMascot(4.5,2.4,0.9,G.score>=1200?"cool":"cheer",t);
-  ui.tapgo.style.display="flex";ui.tapgo.firstElementChild.textContent="↻ 冲更高段位 · 再战";
-  ui.tapgo.onclick=()=>location.reload();
+  ui.tapgo.style.display="flex";
+  ui.tapgo.firstElementChild.textContent=FROM_MAP?"⤴ 返回战役地图":"↻ 冲更高段位 · 再战";
+  ui.tapgo.onclick=()=>{FROM_MAP?location.href="../map/":location.reload()};
 }
 function stripTex(s){return String(s||"").replace(/\\(mathrm|frac|left|right|in|cup|infty|pi)/g,"")
   .replace(/[${}\\]/g,"").replace(/\s+/g," ")}

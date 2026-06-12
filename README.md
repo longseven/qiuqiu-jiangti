@@ -103,9 +103,15 @@ storyboard.json ──► lint(渲染正确性硬门槛)
 # 先跑过 dub(游戏复用 TTS 音频与句锚点),然后导出
 ./venv/bin/python -m pipeline.export_game storyboards/daoshu_chuangguan_v2.json \
     --builddir build/daoshu_chuangguan_v2 --outdir game/daoshu_v2
-# 任意静态服务器打开(或直接发给手机浏览器)
-./venv/bin/python -m http.server 8000 --directory game/daoshu_v2
+# 以 game/ 为根起服务,入口是战役地图(/map/),BOSS 关在 /daoshu_v2/
+./venv/bin/python -m http.server 8000 --directory game
 ```
+
+MOBA 层(借鉴机制不借用素材):三流派开局(🛡️稳健/⚔️暴力/🧠技巧,
+心数·倒计时·判定·战力倍率随之变化)、4 心生命与 BOSS 反扑、连杀播报、
+装备商店、终结连招、七档段位战报;[game/map/](game/map/) 是推塔战役地图
+(兵线小题 → 外塔 → 水晶 BOSS,localStorage 存档,星级解锁链)。
+设计详见 [游戏设计.md](游戏设计.md)。
 
 ## 下一阶段(见开发方案)
 
