@@ -17,6 +17,7 @@
     padding:18px;box-shadow:0 12px 40px rgba(15,20,60,.18);pointer-events:auto;
     border:2px solid #e3e9f5}
   .q{font-size:clamp(15px,4.2vmin,21px);font-weight:700;color:var(--ink);margin-bottom:12px;line-height:1.4}
+  sup{font-size:.62em;line-height:0}
   .opt{display:block;width:100%;margin:8px 0;padding:11px 14px;font-size:clamp(14px,4vmin,19px);
     font-weight:700;color:var(--blue);background:#eef3ff;border:2px solid #bcd0ff;border-radius:12px;
     text-align:left;cursor:pointer;transition:transform .08s}
@@ -282,7 +283,7 @@ async function preloadAudio(){
 
 function showBanner(t,sub,color){ui.banner.textContent=t;ui.banner.style.color=color||COL.BLUE;
   ui.banner.style.opacity=t?1:0;ui.sub.textContent=sub||"";ui.sub.style.opacity=sub?1:0;}
-function toast(t,ms=2600){ui.toast.textContent=t;ui.toast.style.opacity=1;
+function toast(t,ms=2600){ui.toast.innerHTML=fmt(t);ui.toast.style.opacity=1;
   clearTimeout(ui.toast._t);ui.toast._t=setTimeout(()=>ui.toast.style.opacity=0,ms);}
 function nextScene(){
   G.si++;G.interIdx=0;G.inter=null;G.bubble=null;ui.tapgo.style.display="none";
@@ -360,11 +361,11 @@ function spawnDmg(x,y,txt,c,size){G.dmgs.push({x,y,txt,c,size:size||18,born:now(
 function startInteraction(it){
   if(it.type==="quiz"){
     let left=12;                                       // 12s 倒计时
-    ui.panel.innerHTML=`<div id="ring">${left}</div><div class="q">${esc(it.question)}</div>`+
-      it.options.map((o,i)=>`<button class="opt" data-i="${i}">${"ABC"[i]}. ${esc(o)}</button>`).join("")+
+    ui.panel.innerHTML=`<div id="ring">${left}</div><div class="q">${fmt(it.question)}</div>`+
+      it.options.map((o,i)=>`<button class="opt" data-i="${i}">${"ABC"[i]}. ${fmt(o)}</button>`).join("")+
       `<div class="tools"><button class="tool" id="cut">🪙15 排除一个错项</button>`+
       `<button class="tool" id="peek">🪙10 球球支招</button></div>`+
-      `<div class="hintbox" id="hb">${esc(it.hint||"")}</div>`;
+      `<div class="hintbox" id="hb">${fmt(it.hint||"")}</div>`;
     ui.panel.style.display="block";
     const ring=ui.panel.querySelector("#ring");
     const tick=()=>{left--;if(left<=3&&left>0)SFX.tick();
@@ -423,7 +424,37 @@ function startInteraction(it){
   }
 }
 function esc(s){return String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))}
+// ^(..) / ^x -> 真上标(设计稿约定的 ^ 记号,DOM 层用 <sup> 排版)
+function fmt(s){return esc(s).replace(/\^\(([^()]+)\)/g,"<sup>$1</sup>")
+  .replace(/\^([0-9a-zA-Zπ]+)/g,"<sup>$1</sup>")}
 function angDiff(a,b){let d=Math.abs(a-b)%Math.PI;return Math.min(d,Math.PI-d)}
+
+/* 画布公式排版:^(..)/^x 上标缩小抬高,₀-₉ 下标缩小下沉(不依赖字体下标字形) */
+function mseg(s){
+  const out=[];let i=0,plain="";
+  const push=()=>{if(plain){out.push({k:0,s:plain});plain=""}};
+  while(i<s.length){
+    if(s[i]==="^"){
+      const m=/^\^\(([^()]+)\)/.exec(s.slice(i))||/^\^([0-9a-zA-Zπ]+)/.exec(s.slice(i));
+      if(m){push();out.push({k:1,s:m[1]});i+=m[0].length;continue}
+    }
+    const sub="₀₁₂₃₄₅₆₇₈₉".indexOf(s[i]);
+    if(sub>=0){push();out.push({k:-1,s:""+sub});i++;continue}
+    plain+=s[i];i++;
+  }
+  push();return out;
+}
+function mtext(s,x,y,size,color,align="center",weight=800){
+  const segs=mseg(String(s)),base=size*S/28;
+  const f=sz=>`${weight} ${sz*S/28}px "PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif`;
+  let wsum=0;
+  for(const g of segs){ctx.font=f(g.k?size*.62:size);g.w=ctx.measureText(g.s).width;wsum+=g.w}
+  let[px,py]=U(x,y);
+  px-=align==="center"?wsum/2:align==="right"?wsum:0;
+  ctx.fillStyle=color;ctx.textAlign="left";ctx.textBaseline="middle";
+  for(const g of segs){ctx.font=f(g.k?size*.62:size);
+    ctx.fillText(g.s,px,py+(g.k>0?-.34:g.k<0?.22:0)*base);px+=g.w}
+}
 
 /* ---------------- 指针交互 ---------------- */
 let pointer={down:false,x:0,y:0};
@@ -629,18 +660,18 @@ function drawPart(t){
     const v=G.v3, dragging=G.inter&&G.inter.type==="valley_drag";
     if(dragging||G.interIdx>1){
       GV.hline(M.p3.L,COL.PINK,[8,6]);
-      GV.dot(M.p3.x1,g3(M.p3.x1),COL.RED,8);text("x₁",gx(M.p3.x1),gy(g3(M.p3.x1))-0.55,14,COL.RED);
+      GV.dot(M.p3.x1,g3(M.p3.x1),COL.RED,8);mtext("x₁",gx(M.p3.x1),gy(g3(M.p3.x1))-0.55,14,COL.RED);
       const x3=v.x3done?M.p3.x3:(v.x3??M.p3.x3+0.1);
       GV.dot(x3,g3(x3),v.x3done?COL.GREEN:COL.RED,9);
-      text("x₃",gx(x3),gy(g3(x3))-0.55,14,v.x3done?COL.GREEN:COL.RED);
+      mtext("x₃",gx(x3),gy(g3(x3))-0.55,14,v.x3done?COL.GREEN:COL.RED);
       const x2=v.x2done?M.p3.x2:(v.x2??M.p3.x2-0.14);
       GV.dot(x2,g3(x2),v.x2done?COL.GREEN:COL.GOLD,9);
-      text("x₂",gx(x2),gy(g3(x2))-0.55,14,COL.GOLD);
+      mtext("x₂",gx(x2),gy(g3(x2))-0.55,14,COL.GOLD);
       // 能量条
       const sum=M.p3.x1+x2+x3, p=Math.min(1,sum/M.target3);
       const[ex,ey]=U(1.2,5.5);ctx.fillStyle="#eef2f8";rr(ex,ey,6.6*S,.5*S,.25*S);ctx.fill();
       ctx.fillStyle=p>=1?COL.GREEN:COL.GOLD;rr(ex+3,ey+3,(6.6*S-6)*p,.5*S-6,.2*S);ctx.fill();
-      text(`x₁+x₂+x₃ ${p>=1?"> 3π/4 ✦ 突破!":"充能中…"}`,4.5,5.0,14,p>=1?COL.GREEN:COL.MUTED);}
+      mtext(`x₁+x₂+x₃ ${p>=1?"> 3π/4 ✦ 突破!":"充能中…"}`,4.5,5.0,14,p>=1?COL.GREEN:COL.MUTED);}
     function gx(x){return GV.vp.x+(x-GV.xlim[0])/(GV.xlim[1]-GV.xlim[0])*GV.vp.w}
     function gy(y){return GV.vp.y+(y-GV.ylim[0])/(GV.ylim[1]-GV.ylim[0])*GV.vp.h}
   }
@@ -681,7 +712,7 @@ function drawSummary(t){
   }catch(e){}}
   if(G._rec.trim())text(G._rec,4.5,8.1,14,G._rec.includes("新纪录")?COL.RED:COL.MUTED);
   const rows=G.scene&&G.scene.rows||[];
-  rows.forEach((r,i)=>text(`${r.idx}  ${r.plain||stripTex(r.tex)}`,4.5,7.1-i*0.85,13,COL[r.accent]||COL.WHITE));
+  rows.forEach((r,i)=>mtext(`${r.idx}  ${r.plain||stripTex(r.tex)}`,4.5,7.1-i*0.85,13,COL[r.accent]||COL.WHITE));
   text("你卡在第几关?评论区晒出你的评级!",4.5,4.3,16,COL.PINK);
   drawMascot(4.5,2.9,0.9,"cheer",t);
   ui.tapgo.style.display="flex";ui.tapgo.firstElementChild.textContent="↻ 再战一局";
