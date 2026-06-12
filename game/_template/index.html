@@ -268,6 +268,7 @@ const G={si:-1,scene:null,phase:"title",t0:performance.now(),lt:0,
   hp:1,coins:0,combo:0,retries:0,retriesBy:{},
   coinsFly:[],confetti:[],dmgs:[],bossHurt:0,shake:0,rage:0,
   mascotExpr:null,mascotTapT:-9,
+  deck:{},shop:null,battle:null,assist:false,
   drag:null,aim:{angle:1.2},aVal:.4,v3:{x3:null,x2:null,x3done:false,x2done:false},
   totalInters:0,doneInters:0};
 D.scenes.forEach(s=>G.totalInters+=s.interactions.length);
@@ -296,13 +297,101 @@ function nextScene(){
   if(a){a.currentTime=0;a.play();G.audio=a;
     a.onended=()=>{if(!G.inter)setTimeout(()=>{if(!G.inter&&D.scenes[G.si]===G.scene)nextScene()},600)};}
   else G.audio=null;
+  G.battle=null;
   if(G.phase==="part")G.lastPart=G.scene.id;
   if(G.phase==="card")SFX.drum();
-  if(G.phase==="clear"){SFX.fanfare();spawnConfetti();
-    setTimeout(()=>{G.coins+=G.scene.xp/50|0;SFX.coin()},600);}
+  if(G.phase==="clear")openShop();             // 通关 → 备战商店 → 战斗回合
   if(G.phase==="hook")setTimeout(()=>SFX.boom(),1200);
 }
 function partColor(){return COL[G.scene&&G.scene.accent]||COL.BLUE}
+
+/* ---------------- 云顶式备战:招式卡 · 升星 · 羁绊 · 战斗回合 ----------------
+   答对互动掉本关招式卡(暴击 x2);关间商店买卡/刷新/吃利息;
+   同名 2 张=2星 3 张=3星;同系 2 张 +50% / 3 张 x2;三系全有再 +30%;
+   每关通关后卡组自动出击,BOSS 血主要靠战斗回合打掉。 */
+const CARDS=[                                  // 与每关 3 个互动一一对应
+  {id:"c11",name:"代值探路",sys:"切线系",part:"part1"},
+  {id:"c12",name:"乘积求导",sys:"切线系",part:"part1"},
+  {id:"c13",name:"点斜式",sys:"切线系",part:"part1"},
+  {id:"c21",name:"分参流",sys:"零点系",part:"part2"},
+  {id:"c22",name:"单调下坡",sys:"零点系",part:"part2"},
+  {id:"c23",name:"开区间盾",sys:"零点系",part:"part2"},
+  {id:"c31",name:"辅助角合体",sys:"山谷系",part:"part3"},
+  {id:"c32",name:"对称斩",sys:"山谷系",part:"part3"},
+  {id:"c33",name:"右偏一推",sys:"山谷系",part:"part3"},
+];
+const SYSCOLOR={"切线系":"BLUE","零点系":"GOLD","山谷系":"GREEN"};
+const STAR_DMG=[0,.04,.10,.18];                // 星级伤害(占 BOSS 总血)
+function cardStar(n){return Math.min(3,n)}
+function dropCard(c,n){
+  const before=cardStar(G.deck[c.id]||0);
+  G.deck[c.id]=(G.deck[c.id]||0)+n;
+  const star=cardStar(G.deck[c.id]);
+  spawnDmg(4.5,8.6,`获得【${c.name}】${n>1?"x"+n:""}`,COL[SYSCOLOR[c.sys]],15);
+  if(star>before&&star>1){SFX.fanfare();
+    spawnDmg(4.5,7.5,`${c.name} 升 ${star} 星!`,COL.GOLD,19);}
+}
+function synMult(){                            // 羁绊倍率(按系收齐张数)
+  const by={};
+  for(const c of CARDS)if(G.deck[c.id])by[c.sys]=(by[c.sys]||0)+1;
+  const all=Object.keys(by).length>=3?1.3:1,m={};
+  for(const s in by)m[s]=(by[s]>=3?2:by[s]>=2?1.5:1)*all;
+  return{m,by,all};
+}
+function deckQueue(){
+  const{m}=synMult(),q=[];
+  for(const c of CARDS){const n=G.deck[c.id]||0;if(!n)continue;
+    const star=cardStar(n);q.push({c,star,dmg:STAR_DMG[star]*(m[c.sys]||1)});}
+  return q;
+}
+function shopPool(){                           // 已闯到哪关,商店就卖到哪关的卡
+  const upto=+String(G.lastPart||"part1").slice(-1);
+  return CARDS.filter(c=>+c.part.slice(-1)<=upto);
+}
+function rollShop(){const p=shopPool();G.shop=[0,0,0].map(()=>p[Math.random()*p.length|0]);}
+function openShop(){
+  const interest=Math.min(5,G.coins/10|0);     // 云顶利息:每 10 金币 +1,上限 5
+  if(interest){G.coins+=interest;toast(`存款利息 +${interest} 金币!`,2200);}
+  G.battle={stage:"shop"};rollShop();renderShop();
+}
+function renderShop(){
+  const{by}=synMult();
+  const syn=["切线系","零点系","山谷系"].map(s=>{const n=by[s]||0;
+    return `<span style="color:${n>=3?"#0f8a3d":n>=2?"#c2780c":"#94a3b8"}">${s} ${n}/3</span>`}).join(" · ");
+  ui.panel.innerHTML=
+    `<div class="q">备战商店<span style="float:right;color:#c2780c">🪙${G.coins}</span></div>`+
+    `<div style="font-size:13px;font-weight:700;margin-bottom:8px">${syn}`+
+    `${synMult().all>1?' <span style="color:#ec5a86">全能学霸 +30%</span>':""}</div>`+
+    G.shop.map((c,i)=>{
+      if(!c)return `<button class="opt dim" disabled>已购入</button>`;
+      const own=G.deck[c.id]||0;
+      return `<button class="opt" data-i="${i}" ${G.coins<3?"disabled":""}>${esc(c.name)} `+
+        `<small style="color:#64748b;font-size:.75em">${c.sys}${own?` · 已有${"★".repeat(cardStar(own))}`:""}</small>`+
+        `<span style="float:right;color:#c2780c">🪙3</span></button>`}).join("")+
+    `<div class="tools"><button class="tool" id="reroll" ${G.coins<2?"disabled":""}>🪙2 刷新</button>`+
+    `<button class="tool" id="fight" style="color:#fff;background:#e11d48;border-color:#e11d48">开战!</button></div>`;
+  ui.panel.style.display="block";
+  ui.panel.querySelectorAll(".opt[data-i]").forEach(b=>b.onclick=()=>{
+    const c=G.shop[+b.dataset.i];if(!c||G.coins<3)return;
+    G.coins-=3;SFX.coin();dropCard(c,1);G.shop[+b.dataset.i]=null;renderShop();});
+  ui.panel.querySelector("#reroll").onclick=()=>{
+    if(G.coins<2)return;G.coins-=2;SFX.pop();rollShop();renderShop();};
+  ui.panel.querySelector("#fight").onclick=startFight;
+}
+function startFight(){
+  ui.panel.style.display="none";
+  const q=deckQueue();
+  if(!q.length)q.push({c:{name:"球球挠击",sys:""},star:1,dmg:.02});
+  G.battle={stage:"fight",q,t0:now(),fired:0};SFX.drum();
+}
+function finishBattle(){
+  if(G.scene.final&&G.hp>0.001){                // 卡组不够强:球球补刀保通关,评级封顶 A
+    G.assist=true;G.hp=0;G.bossHurt=1;G.shake=1;SFX.boom();
+    spawnDmg(4.5,11.2,"球球终结技!",COL.PINK,24);}
+  G.battle={stage:"done",doneAt:now()};
+  SFX.fanfare();spawnConfetti();
+  setTimeout(()=>{G.coins+=G.scene.xp/50|0;SFX.coin()},500);
+}
 
 /* ---------------- 互动调度 ---------------- */
 function checkInteractions(){
@@ -319,7 +408,9 @@ function checkInteractions(){
 function passInteraction(msg,crit){
   const it=G.inter;G.doneInters++;G.combo++;G.coins+=10*Math.min(G.combo,3);
   const dmg=Math.round((100+30*(G.combo-1))*(crit?2:1));
-  damageBoss(1/G.totalInters,(crit?"暴击 -":"-")+dmg+"!",crit?COL.GOLD:COL.RED);
+  damageBoss(crit?.06:.04,(crit?"暴击 -":"-")+dmg+"!",crit?COL.GOLD:COL.RED);
+  const card=CARDS.filter(c=>c.part===G.scene.id)[G.interIdx];
+  if(card)dropCard(card,crit?2:1);             // 答对掉卡,暴击双倍
   G.shake=crit?1:.55;SFX.ding(1+0.06*Math.min(G.combo,6));
   toast(msg||["漂亮!","正解!","就是这个!"][Math.min(G.combo-1,2)]+(G.combo>1?` 连击 x${G.combo}!`:""));
   if(G.combo>=3)spawnDmg(4.5,9.6,`COMBO x${G.combo}!`,COL.PINK,26);
@@ -348,7 +439,8 @@ function autoSolve(){
   else if(it.type==="valley_drag"){G.v3.x3done=G.v3.x2done=true;setTimeout(()=>passInteraction(),700)}
 }
 function damageBoss(d,txt,color){
-  G.hp=Math.max(0,G.hp-d);G.bossHurt=1;
+  // 互动伤害只能磨到 1%,斩杀必须靠战斗回合(最终战可破)
+  G.hp=Math.max(0.01,G.hp-d);G.bossHurt=1;
   const bp=bossPos();if(txt&&bp)spawnDmg(bp[0],bp[1]+1.2,txt,color||COL.RED,20);
 }
 function bossPos(){
@@ -559,7 +651,7 @@ function drawHUD(){
   const cw=ctx.measureText(""+G.coins).width,[gx,gy]=U(8.55,15.35);
   coinIcon(gx-cw-0.34*S,gy,0.20*S);
   text(G.coins,8.55,15.35,15,COL.GOLD,"right");
-  if(G.combo>1){
+  if(G.combo>1&&G.phase==="part"){
     const cs=13+2*Math.min(G.combo,4),txt="连击 x"+G.combo;
     ctx.font=HUDFONT(cs);
     const w2=ctx.measureText(txt).width,[fx,fy]=U(8.55,14.75);
@@ -713,8 +805,28 @@ function hSolve(a){let lo=1e-4,hi=Math.PI/2-1e-4;   // h 单调减,二分求交�
   for(let i=0;i<40;i++){const mid=(lo+hi)/2;(h2(mid)>a)?lo=mid:hi=mid;}return(lo+hi)/2}
 function partStars(id){const r=G.retriesBy[id]||0;return r===0?3:r<=2?2:1}
 function drawClear(t){
-  const c=partColor();
-  text(G.scene.final?"BOSS 击败!":`关${G.scene.idx} 通关!`,4.5,10.8,46,G.scene.final?COL.RED:c);
+  const c=partColor(),b=G.battle;
+  if(b&&b.stage==="shop"){                     // 备战:商店是 DOM 面板,画布只留头尾
+    text("备战阶段 · 攒卡凑羁绊",4.5,14.6,16,COL.MUTED);
+    drawMascot(1.6,4.3,0.7,G.tappedExpr(t,"idea"),t);
+    drawBoss(7.2,4.2,0.6,t,0);text("BOSS 等你",7.2,2.9,12,COL.MUTED);
+    return;
+  }
+  if(b&&b.stage==="fight"){                    // 战斗回合:卡组按节拍出击
+    drawBoss(4.5,11.6,0.95,t,G.bossHurt);
+    const k=Math.min(b.q.length,Math.floor((t-b.t0)/0.55)+1);
+    while(b.fired<k){const e=b.q[b.fired++];
+      G.hp=Math.max(G.scene.final?0:0.01,G.hp-e.dmg);G.bossHurt=1;G.shake=.5;SFX.pop();
+      spawnDmg(4.5+(Math.random()-.5)*1.4,12.9,
+        `${e.c.name}${"★".repeat(e.star)} -${Math.round(e.dmg*100)}%`,
+        COL[SYSCOLOR[e.c.sys]]||COL.PINK,16);}
+    text("你的卡组,出击!",4.5,14.6,18,COL.RED);
+    drawMascot(1.6,4.3,0.7,"cheer",t);
+    if(b.fired>=b.q.length&&t-b.t0>b.q.length*0.55+0.9)finishBattle();
+    return;
+  }
+  text(G.scene.final?(G.assist?"险胜!BOSS 击败!":"BOSS 击败!"):`关${G.scene.idx} 通关!`,
+       4.5,10.8,G.scene.final&&G.assist?34:46,G.scene.final?COL.RED:c);
   if(G.lastPart){const ps=partStars(G.lastPart);
     text("★".repeat(ps)+"☆".repeat(3-ps),4.5,9.4,34,COL.GOLD);
     if(ps===3)text("零失误!",4.5,8.4,15,COL.GREEN);}
@@ -725,14 +837,15 @@ function drawClear(t){
 function drawSummary(t){
   const parts=D.scenes.filter(s=>s.template==="part");
   const star=parts.map(p=>partStars(p.id)),tot=star.reduce((a,b)=>a+b,0),mx=parts.length*3||1;
-  const rank=tot>=mx?"S":tot>=mx-2?"A":tot>=mx-4?"B":"C";
+  let rank=tot>=mx?"S":tot>=mx-2?"A":tot>=mx-4?"B":"C";
+  if(G.assist&&rank==="S")rank="A";            // 靠球球补刀的局拿不到 S
   text("三关 · 全通关!",4.5,14.2,28,COL.GOLD);
   text(rank,4.5,12.4,62,rank==="S"?COL.GOLD:rank==="A"?COL.GREEN:COL.BLUE);
   text({S:"满分剑客 · 一刀斩BOSS",A:"压轴猎人 · 稳!",B:"闯关勇士 · 再磨一刀",
         C:"套路已会 · 再战必赢"}[rank],4.5,10.9,17,COL.PINK);
   text(parts.map((p,i)=>`关${i+1} `+"★".repeat(star[i])+"☆".repeat(3-star[i])).join("  "),
        4.5,9.9,13,COL.GOLD);
-  text(`金币 ${G.coins} · 重试 ${G.retries} 次`,4.5,9.0,15,COL.MUTED);
+  text(`金币 ${G.coins} · 重试 ${G.retries} · 集卡 ${Object.keys(G.deck).length}/${CARDS.length}`,4.5,9.0,14,COL.MUTED);
   if(!G._rec){G._rec=" ";try{                          // 最佳纪录只算一次
     const k="qq_best_"+(D.meta.title||"game"),old=JSON.parse(localStorage.getItem(k)||"null");
     if(!old||tot>old.tot||(tot===old.tot&&G.coins>old.coins)){
@@ -755,7 +868,7 @@ draw();
 setInterval(()=>{
   const lt=(performance.now()-G.t0)/1000;
   if(G.phase==="card"&&lt>1.9)nextScene();
-  else if(G.phase==="clear"&&lt>2.6)nextScene();
+  else if(G.phase==="clear"&&G.battle&&G.battle.stage==="done"&&now()-G.battle.doneAt>2.6)nextScene();
   else checkInteractions();
 },200);
 </script>
