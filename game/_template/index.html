@@ -11,8 +11,8 @@
   html,body{height:100%;background:#0d1020;overflow:hidden;
     font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
   #wrap{position:absolute;background:var(--bg);overflow:hidden}
-  canvas{position:absolute;inset:0;width:100%;height:100%}
-  #ui{position:absolute;inset:0;pointer-events:none}
+  canvas{position:absolute;top:0;left:0;right:0;bottom:0;width:100%;height:100%}
+  #ui{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none}
   .panel{position:absolute;left:6%;right:6%;top:18%;background:#fff;border-radius:18px;
     padding:18px;box-shadow:0 12px 40px rgba(15,20,60,.18);pointer-events:auto;
     border:2px solid #e3e9f5}
@@ -43,7 +43,7 @@
   .card span{font-size:clamp(9px,2.6vmin,11px);color:#64748b}
   .card.on{border-color:var(--green);background:#e9f8ef;box-shadow:0 0 0 1px var(--green)}
   .card:disabled{opacity:.4;cursor:default}
-  #vig{position:absolute;inset:0;pointer-events:none;opacity:0;
+  #vig{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;opacity:0;
     box-shadow:inset 0 0 70px 18px rgba(225,29,72,.75)}
   #actionBtn{position:absolute;left:50%;transform:translateX(-50%);bottom:7%;
     padding:13px 38px;font-size:clamp(16px,4.6vmin,22px);font-weight:800;color:#fff;
@@ -58,7 +58,7 @@
   #toast{position:absolute;left:50%;transform:translateX(-50%);bottom:16%;max-width:84%;
     background:rgba(31,42,68,.92);color:#fff;font-size:clamp(13px,3.8vmin,16px);font-weight:600;
     padding:10px 16px;border-radius:12px;opacity:0;transition:opacity .25s;pointer-events:none;line-height:1.5}
-  #tapgo{position:absolute;inset:0;display:none;align-items:flex-end;justify-content:center;
+  #tapgo{position:absolute;top:0;left:0;right:0;bottom:0;display:none;align-items:flex-end;justify-content:center;
     padding-bottom:9%;pointer-events:auto;color:var(--muted);
     font-size:clamp(13px,3.8vmin,16px);font-weight:700}
   .pulse{animation:pulse 1.2s infinite}
@@ -83,6 +83,16 @@
 /* ============ 球球大战压轴BOSS · 边听边玩 ============
    讲解音频 = 关卡脚本:讲到关键句暂停,玩家互动通过才继续。
    与视频共用 storyboard/timeline/TTS(由 export_game.py 解析打包)。 */
+// 兼容性:roundRect 在 iOS<16.4 / 旧安卓内核(微信 X5)不存在,白屏元凶
+if(window.CanvasRenderingContext2D&&!CanvasRenderingContext2D.prototype.roundRect){
+  CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){
+    r=Math.max(0,Math.min(Array.isArray(r)?r[0]:r,w/2,h/2));
+    this.moveTo(x+r,y);this.arcTo(x+w,y,x+w,y+h,r);this.arcTo(x+w,y+h,x,y+h,r);
+    this.arcTo(x,y+h,x,y,r);this.arcTo(x,y,x+w,y,r);this.closePath();return this;};
+}
+// 手机端排障:任何脚本错误直接显示在屏幕上
+addEventListener("error",e=>{const t=document.getElementById("toast");
+  if(t){t.textContent="出错了: "+e.message;t.style.opacity=1;}});
 const D = window.GAME_DATA, M = D.math;
 const COL = {BLUE:"#2563eb",GOLD:"#c2780c",GREEN:"#0f8a3d",PINK:"#ec5a86",RED:"#e11d48",
              WHITE:"#1f2a44",MUTED:"#475569",BG:"#f6f8fc",GRID:"#dbe3f0",GP:"#ffffff",GS:"#c4cfe0"};
