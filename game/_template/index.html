@@ -133,6 +133,21 @@ function text(s,x,y,size,color,align="center",weight=800){
   ctx.fillStyle=color;ctx.font=`${weight} ${size*S/28}px "PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif`;
   ctx.textAlign=align;ctx.textBaseline="middle";const[p,q]=U(x,y);ctx.fillText(s,p,q);
 }
+const FONT='"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif';
+function mathText(s,x,y,size,color){   // canvas 数学排版:^(...)/^x 画成升幂小字
+  const px=size*S/28, re=/\^\(([^)]+)\)|\^([0-9a-zA-Zπ∞+\-\/]+)/g;
+  const parts=[];let last=0,m;
+  while((m=re.exec(s))){if(m.index>last)parts.push({t:s.slice(last,m.index),sup:0});
+    parts.push({t:m[1]||m[2],sup:1});last=re.lastIndex;}
+  if(last<s.length)parts.push({t:s.slice(last),sup:0});
+  let w=0;
+  for(const p of parts){ctx.font=`800 ${p.sup?px*.64:px}px ${FONT}`;w+=ctx.measureText(p.t).width;}
+  let[cx,cy]=U(x,y),sx=cx-w/2;
+  ctx.textAlign="left";ctx.textBaseline="middle";ctx.fillStyle=color;
+  for(const p of parts){ctx.font=`800 ${p.sup?px*.64:px}px ${FONT}`;
+    ctx.fillText(p.t,sx,cy+(p.sup?-px*.38:0));sx+=ctx.measureText(p.t).width;}
+  ctx.textAlign="center";
+}
 function drawMascot(x,y,s,expr,t){       // mascot.py 的 canvas 移植(常用表情)
   const[cx,cy0]=U(x,y), R=s*S, cy=cy0-0.05*R*Math.sin(2*Math.PI*t/1.6);
   const BODY="#4ecdc4",OUT="#2a9d96",EYE="#11324a",CHEEK="#ff9aa2",BULB="#ffcf6e";
@@ -286,7 +301,7 @@ function announce(t,color){                          // 击杀播报横幅(自�
   clearTimeout(ui.banner._t);
   ui.banner._t=setTimeout(()=>{ui.banner.style.opacity=0;ui.banner.style.transform="scale(1)"},1300);
 }
-function toast(t,ms=2600){ui.toast.textContent=t;ui.toast.style.opacity=1;
+function toast(t,ms=2600){ui.toast.innerHTML=mathFmt(t);ui.toast.style.opacity=1;
   clearTimeout(ui.toast._t);ui.toast._t=setTimeout(()=>ui.toast.style.opacity=0,ms);}
 function nextScene(){
   G.si++;G.interIdx=0;G.inter=null;G.bubble=null;ui.tapgo.style.display="none";
@@ -412,9 +427,9 @@ function startInteraction(it){
     const FULL=8;                                      // 8s 倒计时(MOBA 难度)
     let left=FULL;
     it._timeLeft=FULL;
-    ui.panel.innerHTML=`<div id="ring">${left}</div><div class="q">${esc(it.question)}</div>`+
-      it.options.map((o,i)=>`<button class="opt" data-i="${i}">${"ABC"[i]}. ${esc(o)}</button>`).join("")+
-      `<div class="hintbox" id="hb">${esc(it.hint||"")}</div>`;
+    ui.panel.innerHTML=`<div id="ring">${left}</div><div class="q">${mathFmt(it.question)}</div>`+
+      it.options.map((o,i)=>`<button class="opt" data-i="${i}">${"ABC"[i]}. ${mathFmt(o)}</button>`).join("")+
+      `<div class="hintbox" id="hb">${mathFmt(it.hint||"")}</div>`;
     ui.panel.style.display="block";
     if(G.autoHint){ui.panel.querySelector("#hb").style.display="block";G.autoHint=false;}
     const ring=ui.panel.querySelector("#ring");
@@ -441,7 +456,7 @@ function startInteraction(it){
     let need=0;
     ui.panel.innerHTML=`<div class="q">⚔️ 终结连招!按题目顺序 ①→②→③ 释放招式:</div>`+
       shuffled.map(s=>`<button class="opt" data-seq="${s.seq}">【${s.idx}?】 ${esc(s.name)}</button>`).join("")+
-      `<div class="hintbox" id="hb">${esc(it.hint||"")}</div>`;
+      `<div class="hintbox" id="hb">${mathFmt(it.hint||"")}</div>`;
     ui.panel.style.display="block";
     ui.panel.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{
       const seq=+b.dataset.seq;
@@ -489,6 +504,9 @@ function startInteraction(it){
   }
 }
 function esc(s){return String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))}
+function mathFmt(s){            // DOM 数学排版:e^(π/2) -> e<sup>π/2</sup>
+  return esc(s).replace(/\^\(([^)]+)\)/g,"<sup>$1</sup>")
+               .replace(/\^([0-9a-zA-Zπ∞]+)/g,"<sup>$1</sup>");}
 function angDiff(a,b){let d=Math.abs(a-b)%Math.PI;return Math.min(d,Math.PI-d)}
 
 /* ---------------- 指针交互 ---------------- */
@@ -658,13 +676,15 @@ function drawCard(t){
 }
 function drawPart(t){
   const sc=G.scene,c=partColor();
-  pill(4.5,14.3,`关${sc.idx} · ${sc.title}`,c,20);
+  pill(3.9,14.3,`关${sc.idx} · ${sc.title}`,c,17);
   // 图象
   GV=sceneGV();
   if(sc.id==="part1"){
     GV.panel();GV.curve(f1,COL.BLUE,3,Math.min(1,G.lt/1.6));
-    GV.dot(Math.PI/2,0,COL.PINK,8);
-    text("切点 (π/2, 0)",6.9,7.1,13,COL.PINK);
+    // quiz 问的就是 f(π/2),答完才揭示切点纵坐标(防剧透)
+    const revealed=G.interIdx>0;
+    if(revealed)GV.dot(Math.PI/2,0,COL.PINK,8);
+    text(revealed?"切点 (π/2, 0)":"切点 (π/2, ?)",6.9,7.1,13,COL.PINK);
     // 准星线
     const it=G.inter, firing=it&&it.type==="tangent_shot";
     if(firing||G.interIdx>1){
@@ -764,7 +784,7 @@ function drawSummary(t){
   text(`击破 ${G.doneInters}/${G.totalInters} · 失误 ${G.retries} · 最高连杀 ${G.maxStreak} · 阵亡 ${G.deaths}`,
        4.5,8.1,13,COL.MUTED);
   const rows=G.scene&&G.scene.rows||[];
-  rows.forEach((r,i)=>text(`${r.idx}  ${r.plain||stripTex(r.tex)}`,4.5,7.1-i*0.85,14,COL[r.accent]||COL.WHITE));
+  rows.forEach((r,i)=>mathText(`${r.idx}  ${r.plain||stripTex(r.tex)}`,4.5,7.1-i*0.85,14,COL[r.accent]||COL.WHITE));
   text("敢晒段位吗?评论区报战力!",4.5,4.0,16,COL.PINK);
   drawMascot(4.5,2.4,0.9,G.score>=1200?"cool":"cheer",t);
   ui.tapgo.style.display="flex";ui.tapgo.firstElementChild.textContent="↻ 冲更高段位 · 再战";
