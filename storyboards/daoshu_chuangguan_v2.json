@@ -64,7 +64,8 @@
       "game": {
         "interactions": [
           { "at_sent": 2, "type": "quiz", "question": "代入 x=π/2,f(π/2) 等于?", "options": ["e^(π/2)", "0", "-2e^(π/2)"], "answer": 1, "hint": "cos(3π/2) 和 cos(π/2) 都是 0,两项全灭!" },
-          { "at_sent": 6, "type": "tangent_shot", "hint": "斜率 4e^(π/2) 很陡,把准星拧到和曲线刚好贴上再发射" }
+          { "at_sent": 6, "type": "quiz", "question": "对 eˣ·cos3x 这种乘积求导,正确姿势是?", "options": ["两项分别求导再交叉相加", "只对 cos3x 求导就行", "先代 x=π/2 再求导"], "answer": 0, "hint": "乘积法则 (uv)'=u'v+uv',漏一项斜率直接报废!" },
+          { "at_sent": 7, "type": "tangent_shot", "hint": "斜率 4e^(π/2) 很陡,把准星拧到和曲线刚好贴上再发射" }
         ]
       },
       "items": [
@@ -132,6 +133,7 @@
       "graph": { "plugin": "derivative.h_mono", "params": {} },
       "game": {
         "interactions": [
+          { "at_sent": 4, "type": "quiz", "question": "h(t) 的走势是?", "options": ["一路下降", "先升后降", "一路上升"], "answer": 0, "hint": "h'(t)<0 恒成立,从 h(0)=1 一路滑到 -e^(-π/2)" },
           { "at_sent": 5, "type": "quiz", "question": "a=1 时,(0, π/4) 内有零点吗?", "options": ["有,靠近 0 处", "刚好一个零点", "没有,1 取不到"], "answer": 2, "hint": "区间是开的,h(t) 到不了 1,等号安全!" },
           { "at_sent": 9, "type": "range_lock", "hint": "把 a 拖出 (-e^(-π/2), 1) 这个值域,曲线就碰不到横线了" }
         ]
@@ -202,6 +204,7 @@
       "graph": { "plugin": "derivative.valley", "params": {} },
       "game": {
         "interactions": [
+          { "at_sent": 3, "type": "quiz", "question": "g(x)<0 的解集(山谷)是?", "options": ["(π/12, 5π/12)", "(0, π/4)", "(π/4, π/2)"], "answer": 0, "hint": "cos(3x+π/4)<0 ⟺ 3x+π/4 ∈ (π/2, 3π/2),解出来就是山谷" },
           { "at_sent": 4, "type": "quiz", "question": "若没有 e^x 因子,x₁+x₃ 等于?", "options": ["恰好 = π/2", "大于 π/2", "小于 π/2"], "answer": 0, "hint": "纯余弦的山谷关于 π/4 对称,等高点的和恰好是 π/2" },
           { "at_sent": 8, "type": "valley_drag", "hint": "先把 x₃ 拖到与 x₁ 等高,再把 x₂ 拖到谷内切线平行虚线处" }
         ]
