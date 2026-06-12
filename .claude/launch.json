@@ -4,8 +4,8 @@
     {
       "name": "game",
       "runtimeExecutable": "./venv/bin/python",
-      "runtimeArgs": ["-m", "http.server", "8754", "--directory", "game/test"],
-      "port": 8754
+      "runtimeArgs": ["-m", "http.server", "8755", "--directory", "game/daoshu_v2"],
+      "port": 8755
     }
   ]
 }

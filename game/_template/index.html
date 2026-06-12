@@ -76,8 +76,8 @@ function el(i){return document.getElementById(i)}
 let ctx=cv.getContext("2d"), W=0,H=0,S=1,DPR=Math.min(devicePixelRatio||1,2.5);
 
 function fit(){
-  // 隐藏标签页/嵌入环境可能拿到 0 尺寸,用默认竖屏兜底,可见时 resize 会重算
-  const vw=innerWidth||390, vh=innerHeight||693, ar=9/16;
+  // 隐藏标签页/嵌入环境可能拿到 0 或极小尺寸,用默认竖屏兜底,可见时 resize 会重算
+  const vw=innerWidth>=50?innerWidth:390, vh=innerHeight>=50?innerHeight:693, ar=9/16;
   let w=Math.min(vw,vh*ar), h=w/ar;
   wrap.style.width=w+"px";wrap.style.height=h+"px";
   wrap.style.left=(vw-w)/2+"px";wrap.style.top=(vh-h)/2+"px";
@@ -110,6 +110,9 @@ const SFX={
   buzz(){tone(160,.25,"sawtooth",.3,-.2)},
   pop(){tone(520,.1,"triangle",.3,.6)},
   fanfare(){tone(784,.12,"sine",.4);tone(988,.12,"sine",.4,0,.12);tone(1319,.4,"sine",.45,0,.24)},
+  hurt(){tone(220,.3,"sawtooth",.4,-.5);tone(110,.35,"sine",.5,-.3)},
+  announce(k){const base=[660,784,880,988,1175];      // 连杀数越高音阶越长
+    for(let i=0;i<=Math.min(k,4);i++)tone(base[i],.14,"square",.3,0,i*.09);},
 };
 
 /* ---------------- 数学(与 graphs/derivative.py 一致) ---------------- */
@@ -257,9 +260,12 @@ function sceneGV(){
 const G={si:-1,scene:null,phase:"title",t0:performance.now(),lt:0,
   audio:null,bubble:null,inter:null,interIdx:0,fails:0,
   hp:1,coins:0,combo:0,stars:{},retries:0,
-  coinsFly:[],confetti:[],bossHurt:0,mascotExpr:null,mascotTapT:-9,
+  coinsFly:[],confetti:[],bossHurt:0,bossAtk:0,mascotExpr:null,mascotTapT:-9,
   drag:null,aim:{angle:1.2},aVal:.4,v3:{x3:null,x2:null,x3done:false,x2done:false},
-  totalInters:0,doneInters:0};
+  totalInters:0,doneInters:0,
+  // MOBA 层
+  lives:4,shield:0,dmgMult:1,score:0,streak:0,maxStreak:0,
+  shopOpen:false,partSi:0,autoHint:false,deaths:0};
 D.scenes.forEach(s=>G.totalInters+=s.interactions.length);
 const AUD={};D.scenes.forEach(s=>{if(s.audio){AUD[s.id]=new Audio(s.audio);AUD[s.id].preload="auto";}});
 async function preloadAudio(){
@@ -273,6 +279,13 @@ async function preloadAudio(){
 
 function showBanner(t,sub,color){ui.banner.textContent=t;ui.banner.style.color=color||COL.BLUE;
   ui.banner.style.opacity=t?1:0;ui.sub.textContent=sub||"";ui.sub.style.opacity=sub?1:0;}
+const KILLCALLS=["一血!","双杀!","三杀!","四杀·超凡!","五杀·超神!","传 说!"];
+function announce(t,color){                          // 击杀播报横幅(自动消失)
+  ui.banner.textContent=t;ui.banner.style.color=color||COL.RED;
+  ui.banner.style.opacity=1;ui.banner.style.transform="scale(1.15)";
+  clearTimeout(ui.banner._t);
+  ui.banner._t=setTimeout(()=>{ui.banner.style.opacity=0;ui.banner.style.transform="scale(1)"},1300);
+}
 function toast(t,ms=2600){ui.toast.textContent=t;ui.toast.style.opacity=1;
   clearTimeout(ui.toast._t);ui.toast._t=setTimeout(()=>ui.toast.style.opacity=0,ms);}
 function nextScene(){
@@ -282,14 +295,49 @@ function nextScene(){
   G.scene=D.scenes[G.si];G.phase=G.scene.template;G.t0=performance.now();
   G.v3={x3:null,x2:null,x3done:false,x2done:false};G.aVal=.4;G.aim.angle=1.2;
   GV=sceneGV();                       // 视口随场景重建(判定不依赖渲染循环)
+  if(G.phase==="part")G.partSi=G.si;  // 阵亡复活回到本关
   const a=AUD[G.scene.id];
   if(a){a.currentTime=0;a.play();G.audio=a;
     a.onended=()=>{if(!G.inter)setTimeout(()=>{if(!G.inter&&D.scenes[G.si]===G.scene)nextScene()},600)};}
   else G.audio=null;
   if(G.phase==="card")SFX.drum();
   if(G.phase==="clear"){SFX.fanfare();spawnConfetti();
-    setTimeout(()=>{G.coins+=G.scene.xp/50|0;SFX.coin()},600);}
+    setTimeout(()=>{G.coins+=G.scene.xp/50|0;SFX.coin()},600);
+    if(!G.scene.final)setTimeout(openShop,1200);}      // 终关直奔结算,不开商店
   if(G.phase==="hook")setTimeout(()=>SFX.boom(),1200);
+}
+
+/* ---------------- 装备商店(通关页弹出,买完才继续) ---------------- */
+const SHOP=[
+  {key:"hint",  name:"📜 提示卡", price:30, desc:"下次互动自动亮出提示"},
+  {key:"shield",name:"🛡️ 护盾",   price:50, desc:"抵挡一次 BOSS 反扑(不扣心)"},
+  {key:"double",name:"⚔️ 双倍输出",price:40, desc:"下次得分战力 ×2"},
+];
+function openShop(){
+  if(G.phase!=="clear")return;
+  G.shopOpen=true;
+  const rows=SHOP.map((s,i)=>`<button class="opt" data-k="${i}">${s.name} · ${s.price}🪙<br>
+    <span style="font-size:.78em;font-weight:600;opacity:.75">${s.desc}</span></button>`).join("");
+  ui.panel.innerHTML=`<div class="q">🏪 补给商店(金币 <b id="shopCoins">${G.coins}</b>)</div>${rows}
+    <button class="opt" id="shopSkip" style="color:#475569;border-color:#cbd5e1;background:#f1f5f9">直接下一关 →</button>`;
+  ui.panel.style.display="block";
+  ui.panel.querySelectorAll(".opt[data-k]").forEach(b=>b.onclick=()=>{
+    const s=SHOP[+b.dataset.k];
+    if(G.coins<s.price){toast("金币不够!听讲时多点金币、答题多连击",2200);SFX.buzz();return;}
+    if(s.key==="shield"&&G.shield>0){toast("护盾已在身上",1800);return;}
+    G.coins-=s.price;SFX.coin();
+    if(s.key==="hint")G.autoHint=true;
+    if(s.key==="shield")G.shield=1;
+    if(s.key==="double")G.dmgMult=2;
+    ui.panel.querySelector("#shopCoins").textContent=G.coins;
+    b.classList.add("ok");toast(s.name+" 已装备!",1800);});
+  ui.panel.querySelector("#shopSkip").onclick=closeShop;
+  setTimeout(closeShop,9000);                          // 9 秒不买自动继续
+}
+function closeShop(){
+  if(!G.shopOpen)return;
+  G.shopOpen=false;ui.panel.style.display="none";
+  G.t0=performance.now()-2700;                          // clear 计时器拨到将尽,心跳随即推进
 }
 function partColor(){return COL[G.scene&&G.scene.accent]||COL.BLUE}
 
@@ -301,19 +349,51 @@ function checkInteractions(){
     G.inter=list[G.interIdx];G.fails=0;G.audio.pause();startInteraction(G.inter);
   }
 }
-function passInteraction(msg){
-  const it=G.inter;G.doneInters++;G.combo++;G.coins+=10*Math.min(G.combo,3);
+function passInteraction(msg,precision){
+  const it=G.inter;G.doneInters++;G.combo++;G.streak++;G.kills=(G.kills||0)+1;
+  G.maxStreak=Math.max(G.maxStreak,G.streak);
+  // 战力:基础 100 + 倒计时余量 + 精度分,连击系数 ×1.2^,双倍输出消耗一次
+  let gain=Math.round((100+(it._timeLeft||0)*10+(precision||0))
+                      *Math.pow(1.2,Math.min(G.streak-1,3)))*G.dmgMult;
+  G.dmgMult=1;
+  G.score+=gain;G.coins+=10*Math.min(G.combo,3);
   damageBoss(1/G.totalInters);SFX.ding();
-  toast(msg||["漂亮!","正解!","就是这个!"][Math.min(G.combo-1,2)]+(G.combo>1?` 连击 x${G.combo}!`:""));
+  announce(KILLCALLS[Math.min(G.streak-1,5)],G.streak>=3?COL.RED:COL.GOLD);
+  SFX.announce(Math.min(G.streak-1,4));
+  toast((msg||"正解!")+`  +${gain} 战力`);
   ui.panel.style.display="none";ui.btn.style.display="none";G.drag=null;
   G.inter=null;G.interIdx++;
   setTimeout(()=>{if(G.audio){G.audio.play()}},650);
 }
+function loseHeart(){
+  if(G.shield>0){G.shield--;toast("护盾碎了!挡下致命一击",2200);SFX.buzz();return true;}
+  G.lives--;G.bossAtk=1;SFX.hurt();
+  if(G.lives<=0){defeat();return false;}
+  return true;
+}
 function failInteraction(hint){
-  G.fails++;G.combo=0;G.retries++;SFX.buzz();
+  G.fails++;G.combo=0;G.streak=0;G.retries++;
+  const alive=loseHeart();
+  if(!alive)return;                                    // 阵亡页接管
   if(G.fails>=3){toast("没关系,看球球演示 → "+(hint||""),3200);autoSolve();return;}
-  toast((G.fails===1?"再想想:":"提示:")+(hint||"再试一次!"),3000);
+  toast((G.fails===1?"BOSS 反击!再想想:":"又被打了!提示:")+(hint||"再试一次!"),3000);
   if(G.audio&&G.inter){G.audio.currentTime=Math.max(0,G.inter.sent_start);}  // 回跳重听本句
+}
+function defeat(){
+  G.deaths++;G.phase="defeat";
+  if(G.audio)G.audio.pause();
+  if(G.inter&&G.inter._timer)clearInterval(G.inter._timer);
+  G.inter=null;G.drag=null;
+  ui.panel.style.display="none";ui.btn.style.display="none";
+  showBanner("");SFX.boom();
+  ui.tapgo.style.display="flex";
+  ui.tapgo.firstElementChild.textContent="💀 阵亡!点击复活 · 重打本关";
+}
+function revive(){
+  G.lives=3;G.hp=Math.min(1,G.hp+0); // BOSS 血保留,玩家满状态重打本关
+  G.si=G.partSi-1;G.phase="boot";
+  ui.tapgo.firstElementChild.textContent="▶ 点击继续";
+  nextScene();
 }
 function autoSolve(){
   const it=G.inter;
@@ -323,21 +403,28 @@ function autoSolve(){
   else if(it.type==="tangent_shot"){G.aim.angle=trueAngle();setTimeout(()=>passInteraction(),700)}
   else if(it.type==="range_lock"){G.aVal=1.04;setTimeout(()=>passInteraction(),700)}
   else if(it.type==="valley_drag"){G.v3.x3done=G.v3.x2done=true;setTimeout(()=>passInteraction(),700)}
+  else if(it.type==="combo_chain"){damageBoss(G.hp);setTimeout(()=>passInteraction("球球代打,下次自己来!"),700)}
 }
 function damageBoss(d){G.hp=Math.max(0,G.hp-d);G.bossHurt=1;}
 
 function startInteraction(it){
   if(it.type==="quiz"){
-    let left=12;                                       // 12s 倒计时
+    const FULL=8;                                      // 8s 倒计时(MOBA 难度)
+    let left=FULL;
+    it._timeLeft=FULL;
     ui.panel.innerHTML=`<div id="ring">${left}</div><div class="q">${esc(it.question)}</div>`+
       it.options.map((o,i)=>`<button class="opt" data-i="${i}">${"ABC"[i]}. ${esc(o)}</button>`).join("")+
       `<div class="hintbox" id="hb">${esc(it.hint||"")}</div>`;
     ui.panel.style.display="block";
+    if(G.autoHint){ui.panel.querySelector("#hb").style.display="block";G.autoHint=false;}
     const ring=ui.panel.querySelector("#ring");
-    it._timer=setInterval(()=>{left--;if(left<=3&&left>0)SFX.tick();
+    const tickFn=()=>{left--;it._timeLeft=left;
+      if(left<=3&&left>0)SFX.tick();
       ring.textContent=left;ring.style.color=left<=3?COL.RED:COL.BLUE;
       if(left<=0){clearInterval(it._timer);SFX.go();
-        failInteraction(it.hint);if(G.fails<3){left=12;it._timer=setInterval(arguments.callee,1000)}}},1000);
+        failInteraction(it.hint);
+        if(G.fails<3&&G.phase!=="defeat"){left=FULL;it._timer=setInterval(tickFn,1000);}}};
+    it._timer=setInterval(tickFn,1000);
     ui.panel.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{
       const i=+b.dataset.i;
       if(i===it.answer){clearInterval(it._timer);b.classList.add("ok");
@@ -346,11 +433,41 @@ function startInteraction(it){
       else{b.classList.add("bad");ui.panel.querySelector("#hb").style.display="block";
         failInteraction(it.hint);setTimeout(()=>b.classList.remove("bad"),500);}});
   }
+  else if(it.type==="combo_chain"){
+    // 终结连招:招式卡打乱,按 ①②③ 题序点击;点错 BOSS 回血
+    if(G.audio)G.audio.pause();
+    const order=it.skills.map((s,i)=>i);
+    const shuffled=[...it.skills.map((s,i)=>({...s,seq:i}))].sort(()=>0.31-Math.random());
+    let need=0;
+    ui.panel.innerHTML=`<div class="q">⚔️ 终结连招!按题目顺序 ①→②→③ 释放招式:</div>`+
+      shuffled.map(s=>`<button class="opt" data-seq="${s.seq}">【${s.idx}?】 ${esc(s.name)}</button>`).join("")+
+      `<div class="hintbox" id="hb">${esc(it.hint||"")}</div>`;
+    ui.panel.style.display="block";
+    ui.panel.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{
+      const seq=+b.dataset.seq;
+      if(b.classList.contains("ok"))return;
+      if(seq===need){b.classList.add("ok");need++;SFX.coin();
+        b.textContent=`【第${"一二三"[seq]}招】 `+it.skills[seq].name;
+        if(need>=it.skills.length){
+          damageBoss(G.hp);                            // 清空残血,终结!
+          setTimeout(()=>{announce("终结连招 · KO!",COL.RED);SFX.fanfare();
+            passInteraction("连招全中,BOSS 灰飞烟灭!",200);},500);}}
+      else{b.classList.add("bad");G.hp=Math.min(1,G.hp+0.05);SFX.buzz();
+        toast("顺序错了!BOSS 回血 5%——想想每招治哪一问",2600);
+        need=0;G.retries++;
+        setTimeout(()=>{ui.panel.querySelectorAll(".opt").forEach(x=>{
+          if(!x.classList.contains("bad"))return;x.classList.remove("bad")});},600);
+        ui.panel.querySelectorAll(".opt").forEach(x=>x.classList.remove("ok"));
+        ui.panel.querySelectorAll(".opt").forEach((x,k)=>{
+          const s=shuffled[k];x.textContent=`【${s.idx}?】 ${s.name}`;});
+        ui.panel.querySelector("#hb").style.display="block";}});
+  }
   else if(it.type==="tangent_shot"){
     toast("拖动旋转准星,把切线贴上曲线,然后发射!",3500);
     ui.btn.textContent="🎯 发射切线";ui.btn.style.display="block";
     ui.btn.onclick=()=>{const d=angDiff(G.aim.angle,trueAngle());
-      if(d<=6*Math.PI/180){passInteraction(d<=2.5*Math.PI/180?"完美贴合!满伤害!":"命中!切线拿下!")}
+      if(d<=4*Math.PI/180){const perfect=d<=1.8*Math.PI/180;
+        passInteraction(perfect?"完美贴合!暴击伤害!":"命中!切线拿下!",perfect?180:80)}
       else failInteraction(it.hint);};
     G.drag="aim";
   }
@@ -359,9 +476,10 @@ function startInteraction(it){
     ui.btn.textContent="🔒 锁定安全区";ui.btn.style.display="block";
     ui.btn.onclick=()=>{const eps=.02;
       if(G.aVal>=M.h_top-eps||G.aVal<=M.h_bot+eps){
+        const edge=Math.abs(G.aVal-M.h_top)<.06||Math.abs(G.aVal-M.h_bot)<.06;
         if(Math.abs(G.aVal-M.h_top)<.06)G.aVal=M.h_top;
         if(Math.abs(G.aVal-M.h_bot)<.06)G.aVal=M.h_bot;
-        passInteraction("安全!这个 a 取不到零点!")}
+        passInteraction(edge?"贴着边界锁定,等号艺术!":"安全!这个 a 取不到零点!",edge?160:90)}
       else failInteraction(it.hint);};
     G.drag="range";
   }
@@ -379,6 +497,7 @@ function evPos(e){const r=wrap.getBoundingClientRect();
   const p=e.touches?e.touches[0]:e;return{x:p.clientX-r.left,y:p.clientY-r.top}}
 function onDown(e){const p=evPos(e);pointer={down:true,...p};
   if(G.phase==="title"){startGame();return}
+  if(G.phase==="defeat"){revive();return}
   if(ui.tapgo.style.display!=="none"&&G.phase!=="title"){nextScene();return}
   // 收金币
   for(const c of G.coinsFly){const[cx,cy]=U(c.x,c.y);
@@ -404,14 +523,14 @@ function dragMove(p){
     const v=G.v3;
     if(!v.x3done&&Math.abs(x-(v.x3??M.p3.x3))<Math.abs(x-(v.x2??M.p3.x2))||v.x2done){
       v.x3=Math.max(M.p3.x2+.05,Math.min(1.38,x));
-      if(Math.abs(g3(v.x3)-M.p3.L)<.45&&v.x3>M.p3.x2+.2){v.x3=M.p3.x3;if(!v.x3done){v.x3done=true;SFX.coin();
+      if(Math.abs(g3(v.x3)-M.p3.L)<.32&&v.x3>M.p3.x2+.2){v.x3=M.p3.x3;if(!v.x3done){v.x3done=true;SFX.coin();
         toast("x₃ 就位!和 x₁ 等高 → x₁+x₃ > π/2",2600);}}
     }else{
       v.x2=Math.max(M.p3.x1+.04,Math.min(M.p3.x3-.05,x));
-      if(Math.abs(v.x2-M.p3.x2)<.05){v.x2=M.p3.x2;if(!v.x2done){v.x2done=true;SFX.coin();
+      if(Math.abs(v.x2-M.p3.x2)<.04){v.x2=M.p3.x2;if(!v.x2done){v.x2done=true;SFX.coin();
         toast("x₂ 就位!g'(x₂)=L → x₂ > π/4",2600);}}
     }
-    if(v.x3done&&v.x2done){G.drag=null;setTimeout(()=>passInteraction("三球之和冲破 3π/4,BOSS 暴击!"),800);}
+    if(v.x3done&&v.x2done){G.drag=null;setTimeout(()=>passInteraction("三球之和冲破 3π/4,BOSS 暴击!",120),800);}
   }
 }
 addEventListener("pointerdown",onDown);
@@ -419,6 +538,7 @@ addEventListener("pointermove",e=>dragMove(evPos(e)));
 addEventListener("pointerup",()=>pointer.down=false);
 // click 兜底(部分环境只派发 click 不派发 pointerdown);守卫保证不与 pointerdown 重复生效
 ui.tapgo.onclick=()=>{ if(G.phase==="title")startGame();
+  else if(G.phase==="defeat")revive();
   else if(ui.tapgo.style.display!=="none")nextScene(); };
 
 function mascotPos(){
@@ -441,8 +561,17 @@ function spawnConfetti(){for(let i=0;i<60;i++)G.confetti.push({
 function now(){return performance.now()/1000}
 
 /* ---------------- HUD ---------------- */
+function heart(x,y,r,alive){
+  const[hx,hy]=U(x,y);
+  ctx.fillStyle=alive?COL.RED:"#cbd5e1";
+  ctx.beginPath();
+  ctx.arc(hx-r*.5,hy-r*.3,r*.55,0,7);ctx.arc(hx+r*.5,hy-r*.3,r*.55,0,7);
+  ctx.fill();ctx.beginPath();
+  ctx.moveTo(hx-r*1.02,hy-r*.1);ctx.lineTo(hx+r*1.02,hy-r*.1);ctx.lineTo(hx,hy+r*1.05);
+  ctx.closePath();ctx.fill();
+}
 function drawHUD(){
-  if(["title","card","summary"].includes(G.phase))return;
+  if(["title","card","summary","end"].includes(G.phase))return;
   const hp=G.hp;
   text("BOSS",1.0,15.35,13,COL.RED,"center");
   const[bx,by]=U(1.95,15.56);ctx.fillStyle="#eef2f8";ctx.strokeStyle=COL.GRID;
@@ -450,7 +579,13 @@ function drawHUD(){
   if(hp>0){ctx.fillStyle=COL.RED;rr(bx+3,by+3,Math.max(2,(3.5*S-6)*hp),0.42*S-6,0.18*S);ctx.fill();}
   text(hp<=0?"KO!":Math.round(hp*100)+"%",5.65,15.35,13,COL.RED,"left");
   text("🪙"+G.coins,8.55,15.35,15,COL.GOLD,"right");
-  if(G.combo>1)text("连击x"+G.combo,8.55,14.75,13,COL.PINK,"right");
+  // 玩家生命(红心)+ 护盾 + 战力
+  for(let i=0;i<4;i++)heart(6.55+i*0.55,14.8,0.16*S,i<G.lives);
+  if(G.shield>0){ctx.strokeStyle=COL.BLUE;ctx.lineWidth=2.5;
+    const[sx,sy]=U(6.55,14.8);ctx.beginPath();ctx.arc(sx,sy,0.3*S,0,7);ctx.stroke();}
+  text("战力 "+G.score,8.55,14.25,12,COL.BLUE,"right");
+  if(G.combo>1)text("连击x"+G.combo,1.0,14.8,13,COL.PINK,"left");
+  if(G.dmgMult>1)text("⚔️×2",1.0,14.25,12,COL.RED,"left");
 }
 
 /* ---------------- 各场景渲染 ---------------- */
@@ -460,13 +595,18 @@ function draw(){
   const t=now();G.lt=(performance.now()-G.t0)/1000;
   ctx.clearRect(0,0,W,H);ctx.fillStyle=COL.BG;ctx.fillRect(0,0,W,H);
   G.bossHurt=Math.max(0,G.bossHurt-.04);
+  G.bossAtk=Math.max(0,G.bossAtk-.03);
   const ph=G.phase;
   if(ph==="title")drawTitle(t);
   else if(ph==="hook")drawHook(t);
   else if(ph==="card")drawCard(t);
   else if(ph==="part")drawPart(t);
   else if(ph==="clear")drawClear(t);
+  else if(ph==="defeat")drawDefeat(t);
   else if(ph==="summary"||ph==="end")drawSummary(t);
+  if(G.bossAtk>0){                                     // 被反扑:红屏边缘脉冲
+    ctx.strokeStyle=`rgba(225,29,72,${0.55*G.bossAtk})`;
+    ctx.lineWidth=22*G.bossAtk+6;ctx.strokeRect(0,0,W,H);}
   // 闲手金币
   if(ph==="part"&&!G.inter&&t-lastCoin>4){lastCoin=t;if(Math.random()<.8)spawnCoin(t)}
   G.coinsFly=G.coinsFly.filter(c=>!c.got&&t-c.born<4.5);
@@ -583,17 +723,51 @@ function drawClear(t){
   if(G.scene.combo)text(G.scene.combo,4.5,7.6,20,COL.PINK);
   drawMascot(4.5,3.9,1.1,"thumbsup",t);
 }
+function drawDefeat(t){
+  ctx.fillStyle="rgba(31,42,68,.08)";ctx.fillRect(0,0,W,H);
+  text("阵 亡",4.5,11.6,52,COL.RED);
+  text("BOSS 的反击太狠了…",4.5,10.0,17,COL.MUTED);
+  text(`战力 ${G.score} · 已击破 ${G.doneInters}/${G.totalInters}`,4.5,8.9,15,COL.MUTED);
+  drawBoss(6.4,6.3,0.9+0.05*Math.sin(t*3),t,0);
+  drawMascot(2.4,6.1,0.9,"cry",t);
+}
+const RANKS=[[1800,"最强王者","#ffd700"],[1500,"超凡星耀","#b388ff"],[1200,"璀璨钻石","#7cd6ff"],
+             [900,"尊贵铂金","#9fe8c5"],[600,"荣耀黄金","#e8c46a"],[350,"坚韧白银","#c0c8d8"],
+             [0,"倔强青铜","#c98a5b"]];
+function rankOf(score){return RANKS.find(r=>score>=r[0])}
+function drawBadge(x,y,s,color,label){                  // 盾形段位徽章
+  const[cx,cy]=U(x,y);
+  ctx.fillStyle=color;ctx.strokeStyle="rgba(31,42,68,.25)";ctx.lineWidth=3;
+  ctx.beginPath();
+  ctx.moveTo(cx,cy-1.1*s);ctx.lineTo(cx+0.95*s,cy-0.65*s);ctx.lineTo(cx+0.8*s,cy+0.45*s);
+  ctx.lineTo(cx,cy+1.1*s);ctx.lineTo(cx-0.8*s,cy+0.45*s);ctx.lineTo(cx-0.95*s,cy-0.65*s);
+  ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.fillStyle="rgba(255,255,255,.28)";ctx.beginPath();
+  ctx.moveTo(cx,cy-0.85*s);ctx.lineTo(cx+0.6*s,cy-0.5*s);ctx.lineTo(cx,cy-0.15*s);
+  ctx.lineTo(cx-0.6*s,cy-0.5*s);ctx.closePath();ctx.fill();
+  // 中心星
+  ctx.fillStyle="#fff";ctx.beginPath();
+  for(let k=0;k<10;k++){const an=Math.PI/2+k*Math.PI/5,r=k%2?0.18*s:0.42*s;
+    ctx[k?"lineTo":"moveTo"](cx+r*Math.cos(an),cy+0.1*s-r*Math.sin(an));}
+  ctx.closePath();ctx.fill();
+}
 function drawSummary(t){
-  text("三关 · 全通关!",4.5,13.4,32,COL.GOLD);
-  const acc=G.totalInters?Math.max(0,1-G.retries/(G.totalInters*2)):1;
-  const stars=acc>0.8?3:acc>0.5?2:1;
-  text("★".repeat(stars)+"☆".repeat(3-stars),4.5,11.8,44,COL.GOLD);
-  text(`金币 ${G.coins} · 重试 ${G.retries} 次`,4.5,10.4,18,COL.MUTED);
+  text("战 报",4.5,14.5,26,COL.WHITE);
+  const rk=rankOf(G.score);
+  drawBadge(4.5,12.3,1.0*S,rk[2]);
+  text(rk[1],4.5,10.6,30,"#1f2a44");
+  text(`战力 ${G.score}`,4.5,9.7,18,COL.BLUE);
+  // MVP 称号
+  const mvp=G.retries===0?"MVP · 零失误通关":G.maxStreak>=4?"MVP · 连杀机器":
+            G.deaths===0?"稳健 · 全程没死":"百折不挠 · 复活继续刚";
+  text(mvp,4.5,8.9,15,COL.PINK);
+  text(`击破 ${G.doneInters}/${G.totalInters} · 失误 ${G.retries} · 最高连杀 ${G.maxStreak} · 阵亡 ${G.deaths}`,
+       4.5,8.1,13,COL.MUTED);
   const rows=G.scene&&G.scene.rows||[];
-  rows.forEach((r,i)=>text(`${r.idx}  ${r.plain||stripTex(r.tex)}`,4.5,9.2-i*1.0,15,COL[r.accent]||COL.WHITE));
-  text("你卡在第几关?评论区告诉我!",4.5,5.4,17,COL.PINK);
-  drawMascot(4.5,3.2,1.0,"cheer",t);
-  ui.tapgo.style.display="flex";ui.tapgo.firstElementChild.textContent="↻ 再战一局";
+  rows.forEach((r,i)=>text(`${r.idx}  ${r.plain||stripTex(r.tex)}`,4.5,7.1-i*0.85,14,COL[r.accent]||COL.WHITE));
+  text("敢晒段位吗?评论区报战力!",4.5,4.0,16,COL.PINK);
+  drawMascot(4.5,2.4,0.9,G.score>=1200?"cool":"cheer",t);
+  ui.tapgo.style.display="flex";ui.tapgo.firstElementChild.textContent="↻ 冲更高段位 · 再战";
   ui.tapgo.onclick=()=>location.reload();
 }
 function stripTex(s){return String(s||"").replace(/\\(mathrm|frac|left|right|in|cup|infty|pi)/g,"")
@@ -601,9 +775,10 @@ function stripTex(s){return String(s||"").replace(/\\(mathrm|frac|left|right|in|
 draw();
 // 逻辑心跳与渲染解耦:标签页后台时 rAF 被节流,互动调度与场景推进不能停
 setInterval(()=>{
+  if(G.phase==="defeat"||G.shopOpen)return;
   const lt=(performance.now()-G.t0)/1000;
   if(G.phase==="card"&&lt>1.9)nextScene();
-  else if(G.phase==="clear"&&lt>2.6)nextScene();
+  else if(G.phase==="clear"&&lt>2.9)nextScene();
   else checkInteractions();
 },200);
 </script>

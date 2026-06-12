@@ -92,6 +92,8 @@ def export(storyboard_path, builddir, outdir):
 
     os.makedirs(os.path.join(outdir, "audio"), exist_ok=True)
     scenes_out = []
+    part_skills = []          # [(idx, 招式名)] 按题序;终结连招用
+    last_part = None          # (scenes_out 下标, timeline 场景)
     for sc in sb["scenes"]:
         tm = timing[sc["id"]]
         ctx = Ctx(sc, tm, 0.0, 0.0)
@@ -124,6 +126,10 @@ def export(storyboard_path, builddir, outdir):
             it["at"] = max(0.0, round(at, 3))
             it["sent_start"] = it["at"]          # 答错回跳点
             inters.append(it)
+        if sc["template"] == "part":
+            part_skills.append({"idx": sc.get("idx", ""),
+                                "name": game.get("skill") or sc.get("title", "")})
+            last_part = (len(scenes_out), tm)
         scenes_out.append({
             "id": sc["id"], "template": sc["template"],
             "accent": sc.get("accent", "BLUE"),
@@ -137,6 +143,16 @@ def export(storyboard_path, builddir, outdir):
             "rows": [{**r, "plain": tex_plain(r.get("tex", ""))} for r in sc.get("rows", [])],
             "cta": sc.get("cta", ""),
         })
+
+    # 终结连招:最后一关最后一句触发,按题序点击招式卡 KO BOSS
+    if last_part and len(part_skills) >= 2:
+        i, tm = last_part
+        sents = tm.get("sents") or []
+        at = max(0.0, round((sents[-1] if sents else 0.0) - tm.get("audio_start", 0.0), 3))
+        scenes_out[i]["interactions"].append({
+            "type": "combo_chain", "at": at, "sent_start": at,
+            "skills": part_skills,
+            "hint": "按 ①②③ 的题目顺序释放招式!"})
 
     data = {"meta": sb.get("meta", {}), "math": _math_constants(), "scenes": scenes_out}
     with open(os.path.join(outdir, "data.js"), "w", encoding="utf-8") as f:
